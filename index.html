@@ -2381,8 +2381,91 @@
       alert("डेटाबेस कनेक्टेड नहीं है!");
     }
   }
+<script>
+    // UTR, पेंडिंग अप्रूवल और नोटिफिकेशन वाला नया लॉजिक
+    const TournamentSettings = {
+        adminUPI: "prakash20251@ybl",
+        
+        requestDeposit: async function(playerUid, amount, utrNumber) {
+            const utrRegex = /^\d{12}$/;
+            if (!utrRegex.test(utrNumber)) {
+                return { success: false, message: "अमान्य UTR! कृपया भुगतान का ठीक 12 अंकों का UTR नंबर दर्ज करें।" };
+            }
 
+            const utrCheckRef = db.ref('used_utrs/' + utrNumber);
+            const snapshot = await utrCheckRef.once('value');
+            if (snapshot.exists()) {
+                return { success: false, message: "यह UTR नंबर पहले ही इस्तेमाल किया जा चुका है!" };
+            }
+
+            const pendingRef = db.ref('pending_deposits/' + utrNumber);
+            await pendingRef.set({
+                playerUid: playerUid,
+                amount: Number(amount),
+                status: "pending",
+                timestamp: Date.now()
+            });
+
+            const notificationRef = db.ref('admin_notifications').push();
+            await notificationRef.set({
+                title: "नया पेमेंट अनुरोध आया है!",
+                message: `खिलाड़ी (${playerUid}) ने ₹${amount} का UTR (${utrNumber}) भेजा है।`,
+                utrNumber: utrNumber,
+                amount: Number(amount),
+                playerUid: playerUid,
+                timestamp: Date.now(),
+                read: false
+            });
+
+            return { success: true, message: "आपका पेमेंट अनुरोध एडमिन के पास भेज दिया गया है।" };
+        },
+
+        adminApproveDeposit: async function(utrNumber) {
+            const pendingRef = db.ref('pending_deposits/' + utrNumber);
+            const snapshot = await pendingRef.once('value');
+
+            if (!snapshot.exists()) {
+                return { success: false, message: "यह अनुरोध नहीं मिला या पहले ही प्रोसेस हो चुका है।" };
+            }
+
+            const data = snapshot.val();
+            if (data.status === "approved") {
+                return { success: false, message: "यह अनुरोध पहले ही स्वीकृत हो चुका है।" };
+            }
+
+            const playerUid = data.playerUid;
+            const amount = data.amount;
+
+            await db.ref('used_utrs/' + utrNumber).set({
+                usedBy: playerUid,
+                amount: amount,
+                timestamp: Date.now()
+            });
+
+            const walletRef = db.ref('players/' + playerUid + '/wallet');
+            await walletRef.transaction(currentBalance => {
+                return (currentBalance || 0) + amount;
+            });
+
+            await pendingRef.remove();
+
+            return { success: true, message: "भुगतान सफलतापूर्वक स्वीकृत कर लिया गया है!" };
+        },
+
+        deleteBroadcastMessage: async function(messageId) {
+            try {
+                await db.ref('broadcast_messages/' + messageId).remove();
+                await db.ref('chats/' + messageId).remove();
+                return { success: true, message: "संदेश सफलतापूर्वक हटा दिया गया है।" };
+            } catch (error) {
+                return { success: false, message: "मैसेज हटाने में त्रुटि: " + error.message };
+            }
+        }
+    };
+
+    window.TournamentSettings = TournamentSettings;
 </script>
+  
 
 </body>
 </html>
