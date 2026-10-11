@@ -1,0 +1,2388 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Free Fire Esports Arena - Firebase Cloud</title>
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Firebase App & Realtime Database SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <style>
+    :root {
+      --primary: #ff5e00;
+      --primary-glow: rgba(255, 94, 0, 0.4);
+      --accent: #ffb703;
+      --bg-dark: #0a0b10;
+      --card-bg: #141724;
+      --card-border: #222738;
+      --text-main: #ffffff;
+      --text-muted: #8e95aa;
+      --success: #00e676;
+      --danger: #ff4d4d;
+      --purple: #8b5cf6;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      min-height: 100vh;
+      background: #0d0f17;
+      position: relative;
+      box-shadow: 0 0 40px rgba(0,0,0,0.8);
+      overflow-x: hidden;
+      padding-bottom: 90px;
+    }
+
+    /* Cloud Sync Status Indicator */
+    .cloud-status-bar {
+      background: #08090f;
+      border-bottom: 1px solid #1a1e2e;
+      padding: 4px 14px;
+      font-size: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text-muted);
+    }
+    .status-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      margin-right: 5px;
+      box-shadow: 0 0 6px var(--success);
+    }
+
+    /* ================= LOGIN SCREEN ================= */
+    #authScreen {
+      min-height: 100vh;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: radial-gradient(circle at top, #1f142b 0%, #0d0f17 75%);
+    }
+
+    .auth-badge {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .auth-badge h1 {
+      font-family: 'Teko', sans-serif;
+      font-size: 44px;
+      letter-spacing: 2px;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .auth-badge span { color: var(--primary); }
+    .auth-badge p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+    .auth-card {
+      background: #141724;
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .auth-title { font-size: 18px; font-weight: 800; margin-bottom: 4px; text-align: center; }
+    
+    .uid-warning {
+      background: rgba(255, 183, 3, 0.1);
+      border: 1px dashed var(--accent);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 11px;
+      color: #ffcc66;
+      line-height: 1.4;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .input-group { margin-bottom: 12px; }
+    .input-label { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; display: block; }
+
+    .auth-input {
+      width: 100%;
+      background: #0d0f17;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 12px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+    .auth-input:focus { border-color: var(--primary); }
+
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #ff5e00 0%, #e65100 100%);
+      color: #fff;
+      border: none;
+      padding: 13px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 6px;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    /* ================= MAIN SCREEN ================= */
+    #mainApp { display: none; }
+
+    .user-profile-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 18px;
+      background: #111420;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .user-info { display: flex; align-items: center; gap: 10px; }
+    .user-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ff5e00, #ffb703);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 15px;
+      color: #fff;
+    }
+
+    .user-name-box b { font-size: 13px; display: block; color: #fff; }
+    .user-name-box span { font-size: 10px; color: var(--accent); font-family: monospace; font-weight: 600; }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-admin-panel {
+      background: rgba(255, 183, 3, 0.15);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-logout {
+      background: rgba(255, 68, 68, 0.15);
+      border: 1px solid #ff4444;
+      color: #ff6b6b;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* WALLET CARD */
+    .wallet-card {
+      margin: 16px 18px;
+      background: linear-gradient(135deg, #181d2f 0%, #0f121d 100%);
+      border: 1px solid #2f3854;
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    }
+
+    .wallet-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 16px;
+    }
+
+    .wallet-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .wallet-balance {
+      font-family: 'Teko', sans-serif;
+      font-size: 42px;
+      font-weight: 700;
+      color: var(--success);
+      line-height: 1;
+    }
+
+    .wallet-subtext {
+      font-size: 10px;
+      color: #8e95aa;
+      margin-top: 2px;
+    }
+
+    .wallet-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .w-btn {
+      padding: 12px 10px;
+      border-radius: 12px;
+      border: none;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .w-btn-add {
+      background: linear-gradient(135deg, #00c853 0%, #009624 100%);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0, 200, 83, 0.25);
+    }
+
+    .w-btn-withdraw {
+      background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(229, 57, 53, 0.25);
+    }
+
+    .w-btn-history {
+      background: #1c2236;
+      border: 1px solid var(--card-border);
+      color: #d1d5db;
+    }
+
+    .w-btn-adminpay {
+      background: linear-gradient(135deg, #ff5e00 0%, #e65100 100%);
+      color: #fff;
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    /* Category Tabs */
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 0 18px;
+      margin: 18px 0 14px;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      background: #151824;
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .section-header {
+      padding: 0 18px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .section-title { font-size: 16px; font-weight: 800; }
+
+    /* Match Cards */
+    .cards-container {
+      padding: 0 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .match-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .card-top {
+      padding: 12px 16px;
+      background: #181c2c;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .match-tag {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.08);
+      color: #d1d5db;
+    }
+
+    .match-tag.cs {
+      background: rgba(139, 92, 246, 0.2);
+      border: 1px solid var(--purple);
+      color: #c4b5fd;
+    }
+
+    .match-tag.lw {
+      background: rgba(255, 183, 3, 0.2);
+      border: 1px solid var(--accent);
+      color: #ffcc66;
+    }
+
+    .status-badge {
+      background: rgba(0, 230, 118, 0.15);
+      border: 1px solid var(--success);
+      color: var(--success);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 12px;
+    }
+
+    .card-body { padding: 16px; }
+
+    .match-name {
+      font-size: 17px;
+      font-weight: 800;
+      margin-bottom: 4px;
+      color: #fff;
+    }
+
+    .match-schedule {
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .reward-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      background: #0f121d;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+    }
+
+    .reward-box { text-align: center; }
+    .reward-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 2px; }
+    .reward-val { font-size: 15px; font-weight: 800; color: #fff; }
+    .reward-val.highlight { color: var(--accent); }
+    .reward-val.entry { color: var(--primary); }
+
+    .upi-info-box {
+      background: rgba(255, 94, 0, 0.08);
+      border: 1px dashed var(--primary);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .upi-left { font-size: 11px; }
+    .upi-label { color: var(--text-muted); margin-bottom: 2px; }
+    .upi-id { font-family: monospace; font-size: 13px; font-weight: 700; color: #fff; }
+
+    .copy-btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .card-footer { display: flex; gap: 10px; }
+
+    .action-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-pay {
+      background: linear-gradient(135deg, #ff5e00 0%, #e65100 100%);
+      color: #fff;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    .btn-room {
+      background: #1c2032;
+      color: #d1d5db;
+      border: 1px solid var(--card-border);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-box {
+      background: #141724;
+      border: 1px solid #2a3148;
+      border-radius: 20px;
+      max-width: 420px;
+      width: 100%;
+      padding: 24px;
+      position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+    .modal-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 18px; line-height: 1.5; }
+
+    .modal-close {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      background: #202638;
+      border: none;
+      color: #fff;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    /* Bottom Navigation */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      background: rgba(13, 15, 23, 0.95);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+      z-index: 50;
+    }
+
+    .nav-item {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .nav-item.active { color: var(--primary); }
+    .nav-icon { font-size: 18px; margin-bottom: 2px; }
+  
+    /* Top Push Notification Banner (Like YouTube/Android System Banner) */
+    .top-notification-banner {
+      position: fixed;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92%;
+      max-width: 440px;
+      background: linear-gradient(135deg, #1b2133 0%, #111422 100%);
+      border: 1px solid var(--accent);
+      border-left: 5px solid var(--success);
+      border-radius: 16px;
+      padding: 14px 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.85);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .top-notification-banner.show {
+      top: 16px;
+    }
+    .notif-bell {
+      width: 42px;
+      height: 42px;
+      background: rgba(255, 183, 3, 0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      animation: bellRing 1.5s infinite;
+    }
+    @keyframes bellRing {
+      0%, 100% { transform: rotate(0); }
+      20%, 60% { transform: rotate(15deg); }
+      40%, 80% { transform: rotate(-15deg); }
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- Live Notification Dropdown Banner -->
+  <div id="topNotificationBanner" class="top-notification-banner" onclick="openAdminSecurityPrompt()">
+    <div class="notif-bell">🔔</div>
+    <div style="flex: 1;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+        <b style="font-size: 13px; color: #ffb703;" id="bannerNotifTitle">नया विड्रॉ अलर्ट!</b>
+        <span style="font-size: 10px; color: var(--text-muted);" id="bannerNotifTime">अभी</span>
+      </div>
+      <div style="font-size: 12px; color: #fff; line-height: 1.4;" id="bannerNotifBody">किसी खिलाड़ी ने पैसे निकालने की रिक्वेस्ट भेजी है।</div>
+    </div>
+  </div>
+
+
+  <!-- Cloud Status Bar -->
+  <div class="cloud-status-bar">
+    <div><span class="status-dot" id="firebaseDot"></span><span id="firebaseStatusText">Firebase Cloud Connected</span></div>
+    <div style="font-family: monospace;" id="syncTimeText">Live Sync</div>
+  </div>
+
+  <!-- ================= LOGIN SCREEN ================= -->
+  <div id="authScreen">
+    <div class="auth-badge">
+      <h1>FREE FIRE <span>BATTLE</span></h1>
+      <p>Esports टूर्नामेंट और रिजल्ट वेरिफिकेशन (Firebase Cloud)</p>
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-title">खिलाड़ी रजिस्ट्रेशन / लॉगिन</div>
+      
+      <div class="uid-warning">
+        ⚠️ <b>ध्यान दें:</b> केवल वही नाम और UID भरें जो आपके Free Fire गेम में है। किल का पैसा सीधे गेम के स्कोरबोर्ड से मिलाकर दिया जाएगा।
+      </div>
+
+      <form onsubmit="handleRegistration(event)">
+        <div class="input-group">
+          <label class="input-label">🎮 Free Fire इन-गेम नाम (Exact IGN):</label>
+          <input type="text" id="ffName" class="auth-input" placeholder="उदा. कातिल_प्रकाश या Pro_Killer" required>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">🆔 Free Fire UID (गेम प्रोफाइल नंबर):</label>
+          <input type="number" id="ffUid" class="auth-input" placeholder="उदा. 2894178392" required>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">✉️ ईमेल आईडी (Gmail):</label>
+          <input type="email" id="userEmail" class="auth-input" placeholder="player@gmail.com" required>
+        </div>
+
+        <button type="submit" class="btn-submit">गेम प्रोफाइल से जॉइन करें ➔</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MAIN APP SCREEN ================= -->
+  <div id="mainApp">
+    
+    <div class="user-profile-bar">
+      <div class="user-info">
+        <div class="user-avatar" id="avatarLetter">FF</div>
+        <div class="user-name-box">
+          <b id="displayPlayer">Player_IGN</b>
+          <span>UID: <span id="displayUid">0000000000</span></span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="btn-admin-panel" onclick="openAdminSecurityPrompt()">
+          👑 एडमिन
+        </button>
+        <button class="btn-logout" onclick="startLogoutStep1()">
+          🚪 Log out
+        </button>
+      </div>
+    </div>
+
+    <!-- WALLET CARD (OWN WALLET BALANCE) -->
+    <div class="wallet-card">
+      <div class="wallet-top-row">
+        <div>
+          <span class="wallet-label">💰 MY WALLET BALANCE</span>
+          <div class="wallet-balance" id="walletBalanceText">₹0.00</div>
+          <div class="wallet-subtext">आपका व्यक्तिगत वॉलेट (शुरुआत में शून्य रहेगा)</div>
+        </div>
+      </div>
+
+      <div class="wallet-grid-4">
+        <button class="w-btn w-btn-add" onclick="openModal('addMoneyModal')">
+          ➕ पैसे डालें
+        </button>
+        <button class="w-btn w-btn-withdraw" onclick="openModal('withdrawModal')">
+          💸 विड्रॉ करें
+        </button>
+        <button class="w-btn w-btn-adminpay" onclick="payAdminDirect(5)">
+          ⚡ एडमिन को दें ₹5
+        </button>
+        <button class="w-btn w-btn-history" onclick="openModal('historyModal')">
+          📜 पासबुक
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+      <button class="tab-btn active" onclick="filterMatches('all')">सभी मैच (9)</button>
+      <button class="tab-btn" onclick="filterMatches('br')">🏆 BR Solo (4)</button>
+      <button class="tab-btn" onclick="filterMatches('cs')">⚔️ Clash Squad 4v4 (3)</button>
+      <button class="tab-btn" onclick="filterMatches('lw')">🐺 Lone Wolf (2)</button>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title" id="matchesCategoryTitle">लाइव टूर्नामेंट मैचेस</div>
+      <div style="font-size: 11px; color: var(--success); font-weight: 700;">● रजिस्ट्रेशन चालू</div>
+    </div>
+
+    <!-- MATCHES CONTAINER WITH STRICT PAYMENT LOCK -->
+    <div class="cards-container">
+      
+      <!-- BR Match 1: Bermuda (₹5 entry, ₹4 kill, ₹50 Booyah) -->
+      <div class="match-card match-item br">
+        <div class="card-top">
+          <span class="match-tag">BR Solo • Bermuda</span>
+          <span class="status-badge" id="badge_br1">0/48 Slots</span>
+        </div>
+        <div class="card-body">
+          <div class="match-name">Bermuda Mega BR Battle #01</div>
+          <div class="match-schedule" id="time_br1">⏰ Today 07:00 PM | 🗺️ Bermuda Solo</div>
+          <div class="reward-grid">
+            <div class="reward-box"><div class="reward-label">एंट्री</div><div class="reward-val entry" id="entry_val_br1">₹5</div></div>
+            <div class="reward-box"><div class="reward-label">Booyah</div><div class="reward-val highlight" id="booyah_val_br1">₹200</div></div>
+            <div class="reward-box"><div class="reward-label">Per Kill</div><div class="reward-val" id="kill_val_br1">₹10</div></div>
+          </div>
+          <div class="upi-info-box">
+            <div class="upi-left"><div class="upi-label">PhonePe UPI ID:</div><div class="upi-id">prakash20251@ybl</div></div>
+            <button class="copy-btn" onclick="copyUpi('prakash20251@ybl')">Copy</button>
+          </div>
+          <div class="card-footer">
+            <button class="action-btn btn-pay" id="btn_join_br1" onclick="joinTournamentMatch('Bermuda Mega BR #01', 5, 'br1')">⚡ Pay ₹5 & Join</button>
+            <button class="action-btn btn-room" onclick="viewRoomDetails('br1', 'Bermuda Mega BR #01', 5)">🔑 Room ID & Pass</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BR Match 2: Purgatory (₹5 entry, ₹4 kill, ₹50 Booyah) -->
+      <div class="match-card match-item br">
+        <div class="card-top">
+          <span class="match-tag">BR Solo • Purgatory</span>
+          <span class="status-badge" id="badge_br2">0/48 Slots</span>
+        </div>
+        <div class="card-body">
+          <div class="match-name">Purgatory Hunter BR #02</div>
+          <div class="match-schedule" id="time_br2">⏰ Today 08:00 PM | 🗺️ Purgatory Solo</div>
+          <div class="reward-grid">
+            <div class="reward-box"><div class="reward-label">एंट्री</div><div class="reward-val entry" id="entry_val_br1">₹5</div></div>
+            <div class="reward-box"><div class="reward-label">Booyah</div><div class="reward-val highlight" id="booyah_val_br1">₹200</div></div>
+            <div class="reward-box"><div class="reward-label">Per Kill</div><div class="reward-val" id="kill_val_br1">₹10</div></div>
+          </div>
+          <div class="upi-info-box">
+            <div class="upi-left"><div class="upi-label">PhonePe UPI ID:</div><div class="upi-id">prakash20251@ybl</div></div>
+            <button class="copy-btn" onclick="copyUpi('prakash20251@ybl')">Copy</button>
+          </div>
+          <div class="card-footer">
+            <button class="action-btn btn-pay" id="btn_join_br2" onclick="joinTournamentMatch('Purgatory Hunter #02', 5, 'br2')">⚡ Pay ₹5 & Join</button>
+            <button class="action-btn btn-room" onclick="viewRoomDetails('br2', 'Purgatory Hunter #02', 5)">🔑 Room ID & Pass</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BR Match 3: Kalahari Special (₹5 entry, ₹4 kill, ₹100 Booyah) -->
+      <div class="match-card match-item br">
+        <div class="card-top">
+          <span class="match-tag">BR Solo • Kalahari (Special)</span>
+          <span class="status-badge" id="badge_br3">0/48 Slots</span>
+        </div>
+        <div class="card-body">
+          <div class="match-name">Kalahari Desert Storm #03</div>
+          <div class="match-schedule" id="time_br3">⏰ Today 09:00 PM | 🗺️ Kalahari Solo</div>
+          <div class="reward-grid">
+            <div class="reward-box"><div class="reward-label">एंट्री</div><div class="reward-val entry" id="entry_val_br3">₹5</div></div>
+            <div class="reward-box"><div class="reward-label">Booyah</div><div class="reward-val highlight" id="booyah_val_br3">₹200</div></div>
+            <div class="reward-box"><div class="reward-label">Per Kill</div><div class="reward-val" id="kill_val_br3">₹10</div></div>
+          </div>
+          <div class="upi-info-box">
+            <div class="upi-left"><div class="upi-label">PhonePe UPI ID:</div><div class="upi-id">prakash20251@ybl</div></div>
+            <button class="copy-btn" onclick="copyUpi('prakash20251@ybl')">Copy</button>
+          </div>
+          <div class="card-footer">
+            <button class="action-btn btn-pay" id="btn_join_br3" onclick="joinTournamentMatch('Kalahari Solo #03', 5, 'br3')">⚡ Pay ₹5 & Join</button>
+            <button class="action-btn btn-room" onclick="viewRoomDetails('br3', 'Kalahari Solo #03', 5)">🔑 Room ID & Pass</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BR Match 4: Alpine (₹5 entry, ₹4 kill, ₹50 Booyah) -->
+      <div class="match-card match-item br">
+        <div class="card-top">
+          <span class="match-tag">BR Solo • Alpine</span>
+          <span class="status-badge" id="badge_br4">0/48 Slots</span>
+        </div>
+        <div class="card-body">
+          <div class="match-name">Alpine Frost War #04</div>
+          <div class="match-schedule" id="time_br4">⏰ Today 10:00 PM | 🗺️ Alpine Solo</div>
+          <div class="reward-grid">
+            <div class="reward-box"><div class="reward-label">एंट्री</div><div class="reward-val entry" id="entry_val_br1">₹5</div></div>
+            <div class="reward-box"><div class="reward-label">Booyah</div><div class="reward-val highlight" id="booyah_val_br1">₹200</div></div>
+            <div class="reward-box"><div class="reward-label">Per Kill</div><div class="reward-val" id="kill_val_br1">₹10</div></div>
+          </div>
+          <div class="upi-info-box">
+            <div class="upi-left"><div class="upi-label">PhonePe UPI ID:</div><div class="upi-id">prakash20251@ybl</div></div>
+            <button class="copy-btn" onclick="copyUpi('prakash20251@ybl')">Copy</button>
+          </div>
+          <div class="card-footer">
+            <button class="action-btn btn-pay" id="btn_join_br4" onclick="joinTournamentMatch('Alpine Solo #04', 5, 'br4')">⚡ Pay ₹5 & Join</button>
+            <button class="action-btn btn-room" onclick="viewRoomDetails('br4', 'Alpine Solo #04', 5)">🔑 Room ID & Pass</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CS Match 1: Bermuda (₹10 entry, ₹70 winner) -->
+      <div class="match-card match-item cs">
+        <div class="card-top">
+          <span class="match-tag cs">⚔️ Clash Squad 4v4</span>
+          <span class="status-badge" id="badge_cs1">0/8 Slots</span>
+        </div>
+        <div class="card-body">
+          <div class="match-name">CS 4v4 Bermuda Custom Rush #01</div>
+          <div class="match-schedule" id="time_cs1">⏰ Today 08:30 PM | 🗺️ Bermuda CS (Unlimited Ammo)</div>
+          <div class="reward-grid">
+            <div class="reward-box"><div class="reward-label">एंट्री</div><div class="reward-val entry" id="entry_val_cs1">₹10</div></div>
+            <div class="reward-box"><div class="reward-label">विजेता</div><div class="reward-val highlight" id="booyah_val_cs1">₹70</div></div>
+            <div class="reward-box"><div class="reward-label">राउंड्स</div><div class="reward-val" id="kill_val_cs1">13 Rounds</div></div>
+          </div>
+          <div class="upi-info-box">
+            <div class="upi-left"><div class="upi-label">PhonePe UPI ID:</div><div class="upi-id">prakash20251@ybl</div></div>
+            <button class="copy-btn" onclick="copyUpi('prakash20251@ybl')">Copy</button>
+          </div>
+          <div class="card-footer">
+            <button class="action-btn btn-pay" id="btn_join_cs1" onclick="joinTournamentMatch('CS 4v4 Bermuda #01', 10, 'cs1')">⚡ Pay ₹10 & Join</button>
+            <button class="action-btn btn-room" onclick="viewRoomDetails('cs1', 'CS 4v4 Bermuda #01', 10)">🔑 Room ID & Pass</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CS Match 2: Kalahari (₹10 entry, ₹70 winner) -->
+      <div class="match-card match-item cs">
+        <div class="card-top">
+          <span class="match-tag cs">⚔️ Clash Squad 4v4</span>
+          <span class="status-badge" id="badge_cs2">0/8 Slots</span>
+        </div>
+        <div class="card-body">
+          <div class="match-name">CS 4v4 Kalahari Hardcore Battle #02</div>
+          <div class="match-schedule" id="time_cs2">⏰ Today 09:30 PM | 🗺️ Kalahari CS (Limited Ammo)</div>
+          <div class="reward-grid">
+            <div class="reward-box"><div class="reward-label">एंट्री</div><div class="reward-val entry" id="entry_val_cs2">₹10</div></div>
+            <div class="reward-box"><div class="reward-label">विजेता</div><div class="reward-val highlight" id="booyah_val_cs2">₹70</div></div>
+            <div class="reward-box"><div class="reward-label">राउंड्स</div><div class="reward-val" id="kill_val_cs2">13 Rounds</div></div>
+          </div>
+          <div class="upi-info-box">
+            <div class="upi-left"><div class="upi-label">PhonePe UPI ID:</div><div class="upi-id">prakash20251@ybl</div></div>
+            <button class="copy-btn" onclick="copyUpi('prakash20251@ybl')">Copy</button>
+          </div>
+          <div class="card-footer">
+            <button class="action-btn btn-pay" id="btn_join_cs2" onclick="joinTournamentMatch('CS 4v4 Kalahari #02', 10, 'cs2')">⚡ Pay ₹10 & Join</button>
+            <button class="action-btn btn-room" onclick="viewRoomDetails('cs2', 'CS 4v4 Kalahari #02', 10)">🔑 Room ID & Pass</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CS Match 3: Purgatory (₹10 entry, ₹70 winner) -->
+      <div class="match-card match-item cs">
+        <div class="card-top">
+          <span class="match-tag cs">⚔️ Clash Squad 4v4</span>
+          <span class="status-badge" id="badge_cs3">0/8 Slots</span>
+        </div>
+        <div class="card-body">
+          <div class="match-name">CS 4v4 Purgatory Clash #03</div>
+          <div class="match-schedule" id="time_cs3">⏰ Today 10:30 PM | 🗺️ Purgatory CS (13 Rounds)</div>
+          <div class="reward-grid">
+            <div class="reward-box"><div class="reward-label">एंट्री</div><div class="reward-val entry" id="entry_val_cs3">₹10</div></div>
+            <div class="reward-box"><div class="reward-label">विजेता</div><div class="reward-val highlight" id="booyah_val_cs3">₹70</div></div>
+            <div class="reward-box"><div class="reward-label">राउंड्स</div><div class="reward-val" id="kill_val_cs3">13 Rounds</div></div>
+          </div>
+          <div class="upi-info-box">
+            <div class="upi-left"><div class="upi-label">PhonePe UPI ID:</div><div class="upi-id">prakash20251@ybl</div></div>
+            <button class="copy-btn" onclick="copyUpi('prakash20251@ybl')">Copy</button>
+          </div>
+          <div class="card-footer">
+            <button class="action-btn btn-pay" id="btn_join_cs3" onclick="joinTournamentMatch('CS 4v4 Purgatory #03', 10, 'cs3')">⚡ Pay ₹10 & Join</button>
+            <button class="action-btn btn-room" onclick="viewRoomDetails('cs3', 'CS 4v4 Purgatory #03', 10)">🔑 Room ID & Pass</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lone Wolf Match 1 (₹15 entry, ₹25 winner) -->
+      <div class="match-card match-item lw">
+        <div class="card-top">
+          <span class="match-tag lw">🐺 Lone Wolf 1v1</span>
+          <span class="status-badge" id="badge_lw1">0/2 Slots</span>
+        </div>
+        <div class="card-body">
+          <div class="match-name">Lone Wolf Iron Cage Battle #01</div>
+          <div class="match-schedule" id="time_lw1">⏰ Today 11:00 PM | 🗺️ Iron Cage 1v1</div>
+          <div class="reward-grid">
+            <div class="reward-box"><div class="reward-label">एंट्री</div><div class="reward-val entry" id="entry_val_lw1">₹15</div></div>
+            <div class="reward-box"><div class="reward-label">विजेता</div><div class="reward-val highlight" id="booyah_val_lw1">₹25</div></div>
+            <div class="reward-box"><div class="reward-label">मोड</div><div class="reward-val" id="kill_val_lw1">1v1 Solo</div></div>
+          </div>
+          <div class="upi-info-box">
+            <div class="upi-left"><div class="upi-label">PhonePe UPI ID:</div><div class="upi-id">prakash20251@ybl</div></div>
+            <button class="copy-btn" onclick="copyUpi('prakash20251@ybl')">Copy</button>
+          </div>
+          <div class="card-footer">
+            <button class="action-btn btn-pay" id="btn_join_lw1" onclick="joinTournamentMatch('Lone Wolf Battle #01', 15, 'lw1')">⚡ Pay ₹15 & Join</button>
+            <button class="action-btn btn-room" onclick="viewRoomDetails('lw1', 'Lone Wolf Battle #01', 15)">🔑 Room ID & Pass</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lone Wolf Match 2 (₹15 entry, ₹25 winner) -->
+      <div class="match-card match-item lw">
+        <div class="card-top">
+          <span class="match-tag lw">🐺 Lone Wolf 1v1</span>
+          <span class="status-badge" id="badge_lw2">0/2 Slots</span>
+        </div>
+        <div class="card-body">
+          <div class="match-name">Lone Wolf Cage Showdown #02</div>
+          <div class="match-schedule" id="time_lw2">⏰ Today 11:30 PM | 🗺️ Iron Cage 1v1</div>
+          <div class="reward-grid">
+            <div class="reward-box"><div class="reward-label">एंट्री</div><div class="reward-val entry" id="entry_val_lw2">₹15</div></div>
+            <div class="reward-box"><div class="reward-label">विजेता</div><div class="reward-val highlight" id="booyah_val_lw2">₹25</div></div>
+            <div class="reward-box"><div class="reward-label">मोड</div><div class="reward-val" id="kill_val_lw2">1v1 Solo</div></div>
+          </div>
+          <div class="upi-info-box">
+            <div class="upi-left"><div class="upi-label">PhonePe UPI ID:</div><div class="upi-id">prakash20251@ybl</div></div>
+            <button class="copy-btn" onclick="copyUpi('prakash20251@ybl')">Copy</button>
+          </div>
+          <div class="card-footer">
+            <button class="action-btn btn-pay" id="btn_join_lw2" onclick="joinTournamentMatch('Lone Wolf Showdown #02', 15, 'lw2')">⚡ Pay ₹15 & Join</button>
+            <button class="action-btn btn-room" onclick="viewRoomDetails('lw2', 'Lone Wolf Showdown #02', 15)">🔑 Room ID & Pass</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-bar">
+      <div class="nav-item active" onclick="filterMatches('all')">
+        <div class="nav-icon">🏆</div><div>Matches</div>
+      </div>
+      <div class="nav-item" onclick="openModal('addMoneyModal')">
+        <div class="nav-icon">➕</div><div>Add Money</div>
+      </div>
+      <div class="nav-item" onclick="openAdminChatModal()">
+        <div class="nav-icon">💬</div><div>मैसेंजर</div>
+      </div>
+      <div class="nav-item" onclick="openAdminSecurityPrompt()">
+        <div class="nav-icon">👑</div><div>Admin Set</div>
+      </div>
+    </nav>
+
+  </div>
+
+</div>
+
+<!-- ================= 0. STEP-1: LOGOUT WARNING ================= -->
+<div class="modal-overlay" id="logoutStep1Modal">
+  <div class="modal-box" style="text-align: center;">
+    <button class="modal-close" onclick="closeModal('logoutStep1Modal')">✕</button>
+    <div style="font-size: 36px; margin-bottom: 8px;">⚠️</div>
+    <div class="modal-title" style="color: #ffb703; font-size: 20px;">लॉग आउट चेतावनी!</div>
+    <div class="modal-sub" style="font-size: 13px; color: #e2e8f0; line-height: 1.6; margin-bottom: 20px;">
+      क्या आप सच में अपनी आईडी को लॉग आउट करना चाहते हैं?
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <button class="action-btn btn-pay" onclick="proceedToGreenLogoutStep2()">
+        हाँ, लॉग आउट करना है
+      </button>
+      <button class="action-btn btn-room" onclick="closeModal('logoutStep1Modal')">
+        नहीं, रद्द करें
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= STEP-2: GREEN BUTTON MODAL ================= -->
+<div class="modal-overlay" id="logoutStep2Modal">
+  <div class="modal-box" style="text-align: center;">
+    <button class="modal-close" onclick="closeModal('logoutStep2Modal')">✕</button>
+    <div style="font-size: 36px; margin-bottom: 8px;">✅</div>
+    <div class="modal-title" style="color: #00e676; font-size: 20px;">आईडी लॉग आउट पुष्टिकरण</div>
+    <div class="modal-sub" style="font-size: 13px; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px;">
+      लॉग आउट करने और होम स्क्रीन पर जाने के लिए नीचे दिए गए हरे बटन पर क्लिक करें।
+    </div>
+
+    <button class="action-btn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #00c853 0%, #009624 100%); color: #fff; font-size: 15px; font-weight: 800; border-radius: 12px; box-shadow: 0 4px 18px rgba(0, 200, 83, 0.45); cursor: pointer;" onclick="finalLogoutToHomeScreen()">
+      🟢 अपना लॉग आउट कर लो
+    </button>
+    
+    <button class="action-btn btn-room" style="width: 100%; margin-top: 10px;" onclick="closeModal('logoutStep2Modal')">
+      वापस जाएँ
+    </button>
+  </div>
+</div>
+
+<!-- ================= MODAL: GREEN PARTICIPATION CONFIRMATION (WALLET HAS MONEY) ================= -->
+<div class="modal-overlay" id="joinConfirmGreenModal">
+  <div class="modal-box" style="text-align: center;">
+    <button class="modal-close" onclick="closeModal('joinConfirmGreenModal')">✕</button>
+    <div style="font-size: 38px; margin-bottom: 8px;">🎮</div>
+    <div class="modal-title" style="color: #00e676; font-size: 20px;" id="greenModalMatchName">टूर्नामेंट जॉइन करें</div>
+    <div class="modal-sub" style="font-size: 13px; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px;" id="greenModalSub">
+      क्या आप इस टूर्नामेंट में भाग लेना चाहते हैं? आपके वॉलेट से ₹5 की फीस काटी जाएगी और रूम आईडी-पासवर्ड तुरंत अनलॉक हो जाएगा।
+    </div>
+
+    <!-- REQUESTED GREEN BUTTON -->
+    <button class="action-btn" id="btnConfirmGreenJoin" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #00c853 0%, #009624 100%); color: #fff; font-size: 15px; font-weight: 800; border-radius: 12px; box-shadow: 0 4px 18px rgba(0, 200, 83, 0.45); cursor: pointer;" onclick="executeWalletDeductionAndUnlock()">
+      🟢 हाँ, मैं भाग लेना चाहता हूँ
+    </button>
+    
+    <button class="action-btn btn-room" style="width: 100%; margin-top: 10px;" onclick="closeModal('joinConfirmGreenModal')">
+      नहीं, अभी नहीं
+    </button>
+  </div>
+</div>
+
+<!-- ================= MODAL: ROOM LOCKED (WALLET DOES NOT HAVE MONEY -> OPEN PHONEPE) ================= -->
+<div class="modal-overlay" id="roomLockedModal">
+  <div class="modal-box" style="text-align: center;">
+    <button class="modal-close" onclick="closeModal('roomLockedModal')">✕</button>
+    <div style="font-size: 38px; margin-bottom: 8px;">🔒</div>
+    <div class="modal-title" style="color: #ffb703; font-size: 20px;">रूम आईडी और पासवर्ड लॉक है!</div>
+    <div class="modal-sub" style="font-size: 13px; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px;" id="roomLockedSub">
+      आपने इस मैच की एंट्री फीस नहीं भरी है और आपके वॉलेट में पर्याप्त बैलेंस नहीं है। टूर्नामेंट में भाग लेने और रूम अनलॉक करने के लिए PhonePe से पेमेंट करें।
+    </div>
+
+    <button class="action-btn btn-pay" id="btnPayViaPhonePe" style="width: 100%; padding: 14px; font-size: 15px; font-weight: 800; border-radius: 12px;" onclick="executePhonePePaymentFromModal()">
+      ⚡ PhonePe से ₹5 देकर अनलॉक करें
+    </button>
+    
+    <button class="action-btn btn-room" style="width: 100%; margin-top: 10px;" onclick="closeModal('roomLockedModal')">
+      बंद करें
+    </button>
+  </div>
+</div>
+
+<!-- ================= 1. SECURE ROOM ID MODAL (STRICTLY FOR CONFIRMED PLAYERS) ================= -->
+<div class="modal-overlay" id="playerRoomModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('playerRoomModal')">✕</button>
+    <div class="modal-title" id="roomModalTitle">🔑 Custom Room Access</div>
+    <div class="modal-sub" id="roomModalSub">कन्फर्म खिलाड़ी: मैच शुरू होने से 15 मिनट पहले यहाँ आईडी और पासवर्ड जारी होगा।</div>
+
+    <div id="roomUnlockedBox" style="background:#0d0f17; padding:14px; border-radius:12px; margin-bottom:16px; border:1px solid #23283a;">
+      <div style="font-size: 11px; color: var(--text-muted); margin-bottom:4px;">Room ID:</div>
+      <div style="font-size: 20px; font-weight: 800; color: var(--accent);" id="displayRoomId">15 मिनट पहले जारी होगा</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 12px; margin-bottom:4px;">Password:</div>
+      <div style="font-size: 20px; font-weight: 800; color: var(--accent);" id="displayRoomPass">******</div>
+    </div>
+
+    <button class="action-btn btn-room" style="width: 100%;" onclick="closeModal('playerRoomModal')">
+      बंद करें
+    </button>
+  </div>
+</div>
+
+<!-- ================= 2. ADVANCED ADMIN CONTROL PANEL ================= -->
+<div class="modal-overlay" id="adminControlModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('adminControlModal')">✕</button>
+    <div class="modal-title">👑 एडमिन लाइव क्लाउड कंट्रोलर</div>
+    <div class="modal-sub">यहाँ से आप जो भी टाइम या स्लॉट बदलेंगे, वह <b>Firebase क्लाउड में सेव होगा और हर खिलाड़ी के मोबाइल में तुरंत बदलेगा</b>:</div>
+
+    <div class="input-group">
+      <label class="input-label">मैच चुनें:</label>
+      <select id="adminMatchSelect" class="auth-input" onchange="loadAdminInputs()">
+        <option value="br1">Bermuda Mega BR #01 (48 Slots)</option>
+        <option value="br2">Purgatory Hunter #02 (48 Slots)</option>
+        <option value="br3">Kalahari Solo #03 (48 Slots)</option>
+        <option value="br4">Alpine Solo #04 (48 Slots)</option>
+        <option value="cs1">CS 4v4 Bermuda #01 (8 Slots)</option>
+        <option value="cs2">CS 4v4 Kalahari #02 (8 Slots)</option>
+        <option value="cs3">CS 4v4 Purgatory #03 (8 Slots)</option>
+        <option value="lw1">Lone Wolf Battle #01 (2 Slots)</option>
+        <option value="lw2">Lone Wolf Showdown #02 (2 Slots)</option>
+      </select>
+    </div>
+
+    <!-- DYNAMIC PRICE & REWARD CONTROLS (SET ENTRY & WINNER AMOUNT) -->
+    <div style="background: rgba(255, 94, 0, 0.08); border: 1px solid var(--primary); border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+      <div style="font-size: 12px; font-weight: 800; color: var(--accent); margin-bottom: 8px;">💵 मैच फीस व इनाम सेटिंग (अपनी मर्जी से सेट करें):</div>
+      
+      <div class="input-group">
+        <label class="input-label">🎮 मैच एंट्री फीस (खिलाड़ी से कितने ₹ लेने हैं):</label>
+        <input type="number" id="adminInputEntry" class="auth-input" placeholder="उदा. 5 या 10">
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">🏆 Booyah / विजेता इनाम (जीतने वाले को कितने ₹ देने हैं):</label>
+        <input type="number" id="adminInputBooyah" class="auth-input" placeholder="उदा. 200">
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">💀 प्रति किल इनाम (Per Kill कितने ₹ देने हैं):</label>
+        <input type="number" id="adminInputPerKill" class="auth-input" placeholder="उदा. 10 (CS/Lone Wolf में 0 रखें)">
+      </div>
+    </div>
+
+    <!-- ADMIN TIME CHANGER -->
+    <div class="input-group">
+      <label class="input-label">⏰ मैच शुरू होने का समय (जब चाहें घटाएँ/बढ़ाएँ):</label>
+      <input type="text" id="adminInputTime" class="auth-input" placeholder="उदा. Today 11:00 PM या 11:30 PM">
+    </div>
+
+    <!-- ADMIN SLOTS / BANDA COUNT CHANGER -->
+    <div class="input-group">
+      <label class="input-label">👥 कितने बंदे आ गए हैं (Joined Slots):</label>
+      <input type="number" id="adminInputSlots" class="auth-input" placeholder="उदा. 15 (ताकि 15/48 दिखे)">
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">🔑 कस्टम रूम आईडी (Room ID):</label>
+      <input type="text" id="adminInputRoomId" class="auth-input" placeholder="उदा. 9845321">
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">🔒 रूम पासवर्ड (Password):</label>
+      <input type="text" id="adminInputPass" class="auth-input" placeholder="उदा. 123">
+    </div>
+
+    <div style="background: rgba(255, 94, 0, 0.1); border: 1px dashed var(--primary); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+      <div style="font-size: 11px; color: var(--accent); font-weight: 700; margin-bottom: 6px;">🔄 एक मैच के बाद अगला नया मैच शुरू करें:</div>
+      <div style="font-size: 11px; color: #cbd5e1; line-height: 1.5; margin-bottom: 10px;">
+        जब एक मैच खत्म हो जाए, तो नीचे दिए गए लाल बटन पर क्लिक करें। इससे पुराने सभी बंदों के लिए रूम तुरंत बंद (लॉक) हो जाएगा, 48 स्लॉट खाली (0/48) हो जाएँगे और नए मैच में खेलने के लिए बंदों को <b>दोबारा पैसे देने पड़ेंगे</b>!
+      </div>
+      <button class="action-btn" style="width: 100%; background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%); color: #fff; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;" onclick="adminStartNewRoundForMatch()">
+        🔴 नया मैच शुरू करें (पुराने बंदों का रूम लॉक करें व दोबारा फीस लें)
+      </button>
+    </div>
+
+    <button class="action-btn btn-pay" style="width: 100%; margin-bottom: 12px;" onclick="saveMatchSettingsByAdmin()">
+      ☁️ टाइम व सेटिंग्स सेव करें (Firebase लाइव)
+    </button>
+
+    <!-- ADMIN CONFIRM WALLET TOP-UP -->
+    <div style="border-top: 1px dashed #2f3854; padding-top: 14px; margin-top: 14px;">
+      <div style="font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 4px;">💰 खिलाड़ी वॉलेट टॉप-अप (कन्फर्मेशन):</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+        खिलाड़ी ने जो PhonePe पर ₹100 या ₹50 अपनी आईडी में डालने के लिए भेजा है, उसे यहाँ से उसके खाते में जोड़ें:
+      </div>
+      <div class="input-group">
+        <label class="input-label">खिलाड़ी का Free Fire UID:</label>
+        <input type="text" id="adminTopupUid" class="auth-input" placeholder="खिलाड़ी का UID नंबर">
+      </div>
+      <div class="input-group">
+        <label class="input-label">जोड़ने वाली रकम (₹):</label>
+        <input type="number" id="adminTopupAmount" class="auth-input" placeholder="उदा. 100">
+      </div>
+      <button class="action-btn w-btn-add" style="width: 100%;" onclick="adminDirectAddMoney()">
+        ✅ खिलाड़ी के वॉलेट में बैलेंस क्रेडिट करें
+      </button>
+    </div>
+  <
+    <!-- ADMIN WITHDRAW REQUESTS MANAGER (DIRECT PHONEPE APPROVAL) -->
+    <div style="border-top: 1px dashed #2f3854; padding-top: 14px; margin-top: 14px;">
+      <div style="font-size: 13px; font-weight: 700; color: #ffb703; margin-bottom: 4px;">💸 खिलाड़ी विड्रॉ रिक्वेस्ट (सीधे PhonePe से भुगतान करें):</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">
+        खिलाड़ियों द्वारा माँगे गए निकासी (विड्रॉ) अनुरोध यहाँ लाइव दिखेंगे। एक क्लिक में PhonePe खोलकर पैसे भेजें:
+      </div>
+      
+      <div id="adminWithdrawRequestsList" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
+        <div style="font-size: 12px; color: var(--text-muted); text-align: center; background: #0d0f17; padding: 10px; border-radius: 8px;">
+          कोई नया विड्रॉ अनुरोध पेंडिंग नहीं है।
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN PERMANENT USER BLOCK / BAN SECTION -->
+    <div style="border-top: 1px dashed #2f3854; padding-top: 14px; margin-top: 14px;">
+      <div style="font-size: 13px; font-weight: 700; color: #ff4d4d; margin-bottom: 4px;">🚫 पैनल / हैक यूज़र्स को ब्लॉक (Ban) करें:</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+        अगर कोई बंदा गेम में पैनल/हैक लगाकर आया है, तो उसका Free Fire UID डालकर हमेशा के लिए ब्लॉक कर दें। ब्लॉक होने के बाद वह कभी लॉगिन नहीं कर पाएगा:
+      </div>
+      <div class="input-group">
+        <label class="input-label">ब्लॉक करने वाले खिलाड़ी का Free Fire UID:</label>
+        <input type="text" id="adminBanUid" class="auth-input" placeholder="उदा. 2894178392">
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="action-btn" style="background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%); color: #fff; font-weight: 800;" onclick="adminToggleUserBan(true)">
+          🔴 हमेशा के लिए ब्लॉक करें
+        </button>
+        <button class="action-btn btn-room" style="font-size: 11px;" onclick="adminToggleUserBan(false)">
+          🟢 अनब्लॉक करें
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 3. ADD MONEY MODAL ================= -->
+<div class="modal-overlay" id="addMoneyModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('addMoneyModal')">✕</button>
+    <div class="modal-title">💰 अपने वॉलेट में पैसे जोड़ें</div>
+    <div class="modal-sub">यहाँ डाले गए पैसे <b>आपके ही खाते में सुरक्षित रहेंगे</b>। जब आप कोई मैच जॉइन करेंगे, तभी मैच फीस कटेगी।</div>
+
+    <div style="background: #0d0f17; padding: 12px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #23283a;">
+      <div style="font-size: 11px; color: var(--text-muted);">वर्तमान वॉलेट बैलेंस:</div>
+      <div style="font-size: 24px; font-weight: 800; color: var(--success);" id="modalAddBal">₹0.00</div>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">वॉलेट में जोड़ने के लिए रकम (₹):</label>
+      <input type="number" id="addMoneyInput" class="auth-input" value="10" min="5">
+    </div>
+
+    <div class="upi-info-box">
+      <div class="upi-left">
+        <div class="upi-label">PhonePe UPI ID:</div>
+        <div class="upi-id">prakash20251@ybl</div>
+      </div>
+      <button class="copy-btn" onclick="copyUpi('prakash20251@ybl')">Copy</button>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">PhonePe का 12-अंकों का UTR / Transaction No दर्ज करें:</label>
+      <input type="text" id="depositUtrNumber" class="auth-input" placeholder="पेमेंट के बाद 12 अंकों का UTR डालें">
+    </div>
+
+    <button class="action-btn btn-pay" style="width: 100%; margin-bottom: 12px;" onclick="openPhonePeForDeposit()">
+      ⚡ स्टेप 1: PhonePe / UPI ऐप खोलकर भुगतान करें
+    </button>
+    <button class="action-btn" style="width: 100%; padding: 13px; background: linear-gradient(135deg, #00c853 0%, #009624 100%); color: #fff; font-weight: 800; border-radius: 12px; cursor: pointer; margin-bottom: 10px;" onclick="submitAddMoney()">
+      ✅ स्टेप 2: 12-अंकों का UTR सबमिट करें (सुरक्षित)
+    </button>
+    
+    <div style="font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.4;">
+      ℹ️ UTR नंबर Firebase डेटाबेस में दर्ज होगा। एडमिन PhonePe पर चेक करके तुरंत बैलेंस अप्रूव करेगा।
+    </div>
+  </div>
+</div>
+
+<!-- ================= 4. WITHDRAW MODAL ================= -->
+<div class="modal-overlay" id="withdrawModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('withdrawModal')">✕</button>
+    <div class="modal-title">💸 जीती हुई रकम निकालें (Withdraw)</div>
+    <div class="modal-sub">प्रति किल (₹4) या Booyah का जीता हुआ पैसा सीधे अपने PhonePe / GPay बैंक खाते में भेजें।</div>
+
+    <div style="background: #0d0f17; padding: 12px; border-radius: 12px; margin-bottom: 14px; border: 1px solid #23283a;">
+      <div style="font-size: 11px; color: var(--text-muted);">निकासी योग्य बैलेंस:</div>
+      <div style="font-size: 24px; font-weight: 800; color: var(--accent);" id="modalWithdrawBal">₹0.00</div>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">अपनी UPI ID दर्ज करें (जहाँ पैसे चाहिए):</label>
+      <input type="text" id="userWithdrawUpi" class="auth-input" placeholder="उदा. आपकानाम@ybl">
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">निकासी रकम (Withdraw Amount):</label>
+      <input type="number" id="withdrawAmount" class="auth-input" placeholder="कम से कम ₹10" min="10">
+    </div>
+
+    <button class="action-btn btn-pay" style="width: 100%; background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%);" onclick="submitWithdraw()">
+      बैंक खाते में विड्रॉ रिक्वेस्ट भेजें
+    </button>
+  </div>
+</div>
+
+
+<!-- ================= WITHDRAW SUCCESS GREEN POPUP ================= -->
+<div class="modal-overlay" id="withdrawSuccessModal">
+  <div class="modal-box" style="text-align: center; border: 1px solid var(--success); box-shadow: 0 10px 30px rgba(0, 230, 118, 0.25);">
+    <button class="modal-close" onclick="closeModal('withdrawSuccessModal')">✕</button>
+    <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+    <div class="modal-title" style="color: var(--success); font-size: 22px;">सफलतापूर्वक भेजा गया!</div>
+    <div id="withdrawSuccessText" style="font-size: 14px; color: #e2e8f0; line-height: 1.6; margin: 14px 0 22px; background: rgba(0, 230, 118, 0.08); border: 1px dashed var(--success); padding: 14px; border-radius: 12px; font-weight: 500;">
+      आपके खाते से रुपये कट चुके हैं और एडमिन को रिक्वेस्ट भेज दी गई है। कुछ देर में आपका रुपया आ जाएगा।
+    </div>
+    <button class="action-btn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #00c853 0%, #009624 100%); color: #fff; font-size: 15px; font-weight: 800; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 18px rgba(0, 200, 83, 0.35);" onclick="closeModal('withdrawSuccessModal')">
+      ठीक है (OK)
+    </button>
+  </div>
+</div>
+
+<!-- ================= 5. HISTORY MODAL ================= -->
+<div class="modal-overlay" id="historyModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('historyModal')">✕</button>
+    <div class="modal-title">📜 वॉलेट पासबुक व लेन-देन</div>
+    <div class="modal-sub">आपके सभी जोड़े गए और मैच एंट्री के पैसों का हिसाब:</div>
+
+    <div id="historyList" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+      <div style="background:#0d0f17; padding:10px; border-radius:8px; font-size:12px; color:var(--text-muted); text-align:center;">
+        शुरुआत में कोई लेन-देन नहीं है (बैलेंस ₹0 है)
+      </div>
+    </div>
+
+    <button class="action-btn btn-room" style="width: 100%;" onclick="closeModal('historyModal')">
+      बंद करें
+    </button>
+  </div>
+</div>
+
+
+<!-- ================= 6. OFFICIAL TOURNAMENT MESSENGER (REAL CHAT UI) ================= -->
+<div class="modal-overlay" id="adminChatModal">
+  <div class="modal-box" style="max-width: 460px; width: 95%; height: 84vh; padding: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: 20px; background: #0f121d; border: 1px solid #23283a;">
+    
+    <!-- Chat Header (Like WhatsApp/Telegram) -->
+    <div style="background: #141726; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #22283a;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #ff5e00, #ffb703); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: #fff;">
+          👑
+        </div>
+        <div>
+          <div style="font-size: 14px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 6px;">
+            <span>एडमिन ब्रॉडकास्ट चैनल</span>
+            <span style="background: rgba(0, 230, 118, 0.15); color: var(--success); font-size: 9px; padding: 2px 6px; border-radius: 10px; font-weight: 700;">● लाइव</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted);">ऑफिशियल टूर्नामेंट नोटिस व चैट</div>
+        </div>
+      </div>
+      <button onclick="closeModal('adminChatModal')" style="background: #202638; border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px;">✕</button>
+    </div>
+
+    <!-- Wide Live Messages Scroll Area (Real Chat Stream) -->
+    <div id="adminChatMessagesList" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: radial-gradient(circle at center, #111422 0%, #0a0b12 100%);">
+      <div style="font-size: 12px; color: var(--text-muted); text-align: center; margin: auto;">अभी तक कोई नया संदेश नहीं है।</div>
+    </div>
+
+    <!-- Bottom Bar 1: Normal Players (Read-Only Info) -->
+    <div id="userChatReadOnlyNotice" style="background: #141724; border-top: 1px solid #20263a; padding: 12px 16px; text-align: center; font-size: 11px; color: var(--text-muted); display: none;">
+      🔒 <b>केवल एडमिन ही संदेश भेज सकते हैं</b> (सभी खिलाड़ी यहाँ सिर्फ पढ़ सकते हैं)
+    </div>
+
+    <!-- Bottom Bar 2: Admin Direct Chat Input Bar (Like WhatsApp Send Bar) -->
+    <div id="adminChatInputSection" style="background: #141724; border-top: 1px solid #23283a; padding: 10px 14px; display: none;">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <input type="text" id="adminChatMessageText" placeholder="यहाँ नया संदेश लिखें (जैसे: रूम 5 मिनट में बनेगा)..." style="flex: 1; background: #0a0b12; border: 1px solid #283046; border-radius: 24px; padding: 12px 16px; color: #fff; font-size: 13px; outline: none;">
+        <button onclick="sendAdminBroadcastMessage()" style="background: linear-gradient(135deg, #ff5e00 0%, #e65100 100%); border: none; color: #fff; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; box-shadow: 0 4px 12px var(--primary-glow);">
+          🚀
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+  /* ================= FIREBASE CLOUD CONFIGURATION ================= */
+  const firebaseConfig = {
+    apiKey: "AIzaSyC4_Pv68-F44zPKG8DuoCwPQGF2ctZEQak",
+    databaseURL: "https://free-fire-tournament-faddc-default-rtdb.firebaseio.com",
+    projectId: "free-fire-tournament-faddc",
+    storageBucket: "free-fire-tournament-faddc.firebasestorage.app",
+    appId: "1:817343116408:android:a9e09dd34352df8209298d"
+  };
+
+  let db = null;
+  let isFirebaseReady = false;
+
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    isFirebaseReady = true;
+    document.getElementById('firebaseStatusText').innerText = "Firebase Cloud: सुरक्षित लाइव सिंक सक्रिय";
+    document.getElementById('firebaseDot').style.background = "#00e676";
+  } catch (err) {
+    console.error("Firebase init fallback:", err);
+    document.getElementById('firebaseStatusText').innerText = "Local Mode (Offline Storage)";
+  }
+
+  const ADMIN_SECRET_PIN = "1619";
+  const ADMIN_UID = "6643967254";
+  const ADMIN_EMAIL = "prakashkushawaha16@gmail.com";
+  const UPI_RECEIVER_ID = "prakash20251@ybl";
+
+  function isCurrentAdminUser() {
+    if (!currentUser) return false;
+    const uUid = (currentUser.uid || '').trim();
+    const uEmail = (currentUser.email || '').trim().toLowerCase();
+    return (uUid === ADMIN_UID || uEmail === ADMIN_EMAIL);
+  }
+
+  let currentUser = { ign: '', uid: '', email: '' };
+  let walletBalance = 0;
+  let historyLogs = [];
+  let joinedMatches = {};
+
+  let matchDatabase = {
+    br1: { id: '', pass: '', time: '⏰ Today 07:00 PM | 🗺️ Bermuda Solo', joined: 0, max: 48, round: 1, entry: 5, booyah: 200, perkill: 10 },
+    br2: { id: '', pass: '', time: '⏰ Today 08:00 PM | 🗺️ Purgatory Solo', joined: 0, max: 48, round: 1, entry: 5, booyah: 200, perkill: 10 },
+    br3: { id: '', pass: '', time: '⏰ Today 09:00 PM | 🗺️ Kalahari Solo', joined: 0, max: 48, round: 1, entry: 5, booyah: 200, perkill: 10 },
+    br4: { id: '', pass: '', time: '⏰ Today 10:00 PM | 🗺️ Alpine Solo', joined: 0, max: 48, round: 1, entry: 5, booyah: 200, perkill: 10 },
+    cs1: { id: '', pass: '', time: '⏰ Today 08:30 PM | 🗺️ Bermuda CS (Unlimited Ammo)', joined: 0, max: 8, round: 1, entry: 10, booyah: 70, perkill: 0 },
+    cs2: { id: '', pass: '', time: '⏰ Today 09:30 PM | 🗺️ Kalahari CS (Limited Ammo)', joined: 0, max: 8, round: 1, entry: 10, booyah: 70, perkill: 0 },
+    cs3: { id: '', pass: '', time: '⏰ Today 10:30 PM | 🗺️ Purgatory CS (13 Rounds)', joined: 0, max: 8, round: 1, entry: 10, booyah: 70, perkill: 0 },
+    lw1: { id: '', pass: '', time: '⏰ Today 11:00 PM | 🗺️ Iron Cage 1v1', joined: 0, max: 2, round: 1, entry: 15, booyah: 25, perkill: 0 },
+    lw2: { id: '', pass: '', time: '⏰ Today 11:30 PM | 🗺️ Iron Cage 1v1', joined: 0, max: 2, round: 1, entry: 15, booyah: 25, perkill: 0 }
+  };
+
+  window.onload = function() {
+    loadLocalFallback();
+    setupFirebaseListeners();
+  };
+
+  function loadLocalFallback() {
+    const savedUser = localStorage.getItem('ff_user_v7');
+    const savedBal = localStorage.getItem('ff_wallet_v7');
+    const savedHist = localStorage.getItem('ff_history_v7');
+    const savedMatches = localStorage.getItem('ff_matches_v7');
+    const savedJoined = localStorage.getItem('ff_joined_v7');
+
+    if (savedBal !== null) walletBalance = parseFloat(savedBal) || 0;
+    if (savedHist) { try { historyLogs = JSON.parse(savedHist); } catch(e) {} }
+    if (savedMatches) { try { matchDatabase = Object.assign(matchDatabase, JSON.parse(savedMatches)); } catch(e) {} }
+    if (savedJoined) { try { joinedMatches = JSON.parse(savedJoined); } catch(e) {} }
+
+    renderMatchDetailsUI();
+
+    if (savedUser) {
+      currentUser = JSON.parse(savedUser);
+      loadHome(currentUser.ign, currentUser.uid, currentUser.email);
+    }
+  }
+
+  function setupFirebaseListeners() {
+    if (!isFirebaseReady || !db) return;
+
+    db.ref('matches').on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        for (let key in data) {
+          if (matchDatabase[key]) {
+            matchDatabase[key] = Object.assign(matchDatabase[key], data[key]);
+          }
+        }
+        localStorage.setItem('ff_matches_v7', JSON.stringify(matchDatabase));
+        renderMatchDetailsUI();
+        document.getElementById('syncTimeText').innerText = "Updated: " + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      }
+    });
+
+    db.ref('admin_notices').on('value', renderAdminNotices);
+    db.ref('withdraw_requests').on('value', renderAdminWithdrawRequests);
+
+    if (currentUser.uid) {
+      listenUserData(currentUser.uid);
+    }
+  }
+
+  function listenUserData(uid) {
+    if (!isFirebaseReady || !db) return;
+
+    db.ref('users/' + uid).on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        if (data.status === 'banned') {
+          localStorage.removeItem('ff_user_v7');
+          alert("🚫 आपका खाता एडमिन द्वारा ब्लॉक (BANNED) कर दिया गया है!\n\nकारण: टूर्नामेंट नियमों का उल्लंघन (पैनल/हैक)।");
+          location.reload();
+          return;
+        }
+        if (data.wallet !== undefined) {
+          walletBalance = parseFloat(data.wallet) || 0;
+          updateBalanceUI();
+        }
+        if (data.joined_matches) {
+          joinedMatches = Object.assign(joinedMatches, data.joined_matches);
+          localStorage.setItem('ff_joined_v7', JSON.stringify(joinedMatches));
+        }
+      }
+    });
+  }
+
+  function renderMatchDetailsUI() {
+    for (let key in matchDatabase) {
+      const m = matchDatabase[key];
+      const timeElem = document.getElementById('time_' + key);
+      const badgeElem = document.getElementById('badge_' + key);
+      const entryElem = document.getElementById('entry_val_' + key);
+      const booyahElem = document.getElementById('booyah_val_' + key);
+      const killElem = document.getElementById('kill_val_' + key);
+      const btnJoin = document.getElementById('btn_join_' + key);
+
+      if (timeElem && m.time) timeElem.innerText = m.time;
+      if (badgeElem) badgeElem.innerText = `${m.joined || 0}/${m.max} Slots`;
+      if (entryElem && m.entry !== undefined) entryElem.innerText = '₹' + m.entry;
+      if (booyahElem && m.booyah !== undefined) booyahElem.innerText = '₹' + m.booyah;
+      if (killElem && m.perkill !== undefined) {
+        killElem.innerText = (m.perkill > 0) ? ('₹' + m.perkill) : (key.startsWith('cs') ? '13 Rounds' : '1v1 Solo');
+      }
+      if (btnJoin && m.entry !== undefined) {
+        btnJoin.innerText = `⚡ Pay ₹${m.entry} & Join`;
+      }
+    }
+  }
+
+      function handleRegistration(e) {
+    e.preventDefault();
+    const ign = document.getElementById('ffName').value.trim();
+    const uid = document.getElementById('ffUid').value.trim();
+    const email = document.getElementById('userEmail').value.trim();
+
+    // 1. Strict IGN validation
+    if (!ign || ign.length < 3 || ign === '123' || ign === '1234' || ign === 'test') {
+      alert("❌ कृपया अपना असली Free Fire IGN (गेम नाम) डालें! फ़र्ज़ी नाम मान्य नहीं है।");
+      return;
+    }
+
+    // 2. Strict Free Fire UID validation
+    const uidRegex = /^[0-9]{8,11}$/;
+    if (!uidRegex.test(uid) || uid === '12345678' || uid === '11111111') {
+      alert("❌ कृपया अपना असली 8 से 11 अंकों का Free Fire UID डालें (जैसे: 2894178392)!\n\nफ़र्ज़ी नंबर मान्य नहीं होगा।");
+      return;
+    }
+
+    // 3. Strict Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      alert("❌ कृपया मान्य ईमेल आईडी डालें (उदा. name@gmail.com)!");
+      return;
+    }
+
+    // 4. Airtight 2-Way Cloud Verification (1 Email = 1 Permanent UID Lock)
+    if (isFirebaseReady && db) {
+      db.ref('users').once('value').then((snapshot) => {
+        const allUsers = snapshot.val() || {};
+        const lowerEmail = email.toLowerCase();
+        const lowerIgn = ign.toLowerCase();
+
+        let emailMatchedUid = null;
+        let emailMatchedUser = null;
+
+        // Check if this Email already exists anywhere in database
+        for (let key in allUsers) {
+          if (allUsers[key] && allUsers[key].email && allUsers[key].email.toLowerCase() === lowerEmail) {
+            emailMatchedUid = key;
+            emailMatchedUser = allUsers[key];
+            break;
+          }
+        }
+
+                // Strict Ban Check (पैनल / हैकर्स का परमानेंट ब्लॉक)
+        if ((allUsers[uid] && allUsers[uid].status === 'banned') || (emailMatchedUser && emailMatchedUser.status === 'banned')) {
+          alert("🚫 आपका खाता हमेशा के लिए ब्लॉक (BANNED) कर दिया गया है!\n\nकारण: टूर्नामेंट नियमों का उल्लंघन / पैनल या हैक का उपयोग।\n\nआप इस टूर्नामेंट ऐप में अब कभी लॉगिन नहीं कर सकते।");
+          return;
+        }
+
+        // Case A: Email is already registered in database!
+        if (emailMatchedUid) {
+          // Rule 1: The UID MUST match the registered UID!
+          if (emailMatchedUid !== uid) {
+            alert("❌ सुरक्षा एरर: नया खाता नहीं बन सकता!\n\nयह ईमेल आईडी (" + email + ") पहले से UID: " + emailMatchedUid + " के साथ रजिस्टर्ड है।\n\nआप गलत या नया UID डालकर दूसरा खाता नहीं बना सकते। कृपया अपनी पहले वाली सही UID डालें।");
+            return;
+          }
+
+          // Rule 2: The IGN (Game Name) MUST match!
+          const savedIgn = (emailMatchedUser.ign || '').trim();
+          if (savedIgn.toLowerCase() !== lowerIgn) {
+            alert("❌ लॉगिन असफल: गलत गेम नाम!\n\nइस UID और ईमेल के साथ रजिस्टर्ड नाम '" + savedIgn + "' है। सही नाम डालें।");
+            return;
+          }
+
+          // Everything matches 100% -> Restore Account!
+          currentUser = { ign: savedIgn, uid: uid, email: emailMatchedUser.email };
+          localStorage.setItem('ff_user_v7', JSON.stringify(currentUser));
+
+          if (emailMatchedUser.wallet !== undefined) {
+            walletBalance = parseFloat(emailMatchedUser.wallet) || 0;
+          }
+          if (emailMatchedUser.joined_matches) {
+            joinedMatches = Object.assign({}, emailMatchedUser.joined_matches);
+            localStorage.setItem('ff_joined_v7', JSON.stringify(joinedMatches));
+          }
+
+          db.ref('users/' + uid).update({
+            last_login: new Date().toISOString()
+          });
+
+          listenUserData(uid);
+          alert("✅ लॉगिन सफल! आपका पुराना खाता लोड हो गया है।\n\nखिलाड़ी: " + savedIgn + "\nUID: " + uid + "\nवॉलेट बैलेंस: ₹" + walletBalance.toFixed(2));
+          loadHome(savedIgn, uid, currentUser.email);
+          return;
+        }
+
+        // Case B: Email is not found, but UID is already taken by a different email!
+        if (allUsers[uid]) {
+          const registeredEmail = allUsers[uid].email || 'दूसरा ईमेल';
+          alert("❌ सुरक्षा एरर: गलत ईमेल आईडी!\n\nयह UID (" + uid + ") पहले से ईमेल " + registeredEmail + " के साथ रजिस्टर्ड है।\n\nकृपया वही असली ईमेल आईडी डालें जो इस UID के साथ पहले डाली थी।");
+          return;
+        }
+
+        // Case C: Neither Email nor UID exists -> Brand New User Permanent Registration!
+        currentUser = { ign, uid, email };
+        localStorage.setItem('ff_user_v7', JSON.stringify(currentUser));
+        walletBalance = 0;
+
+        db.ref('users/' + uid).set({
+          ign: ign,
+          uid: uid,
+          email: email,
+          wallet: 0,
+          joined_matches: {},
+          created_at: new Date().toISOString(),
+          last_login: new Date().toISOString()
+        });
+
+        listenUserData(uid);
+        alert("🎉 नया रजिस्ट्रेशन सफल!\n\nआपकी UID (" + uid + ") और ईमेल (" + email + ") हमेशा के लिए लॉक हो गए हैं।\n\nअब इस ईमेल से कोई दूसरा नया खाता नहीं बन सकता और न ही गलत UID डालकर लॉगिन हो सकता है।");
+        loadHome(ign, uid, email);
+
+      }).catch((err) => {
+        console.error("Firebase Auth Check Error:", err);
+        alert("⚠️ डेटाबेस कनेक्शन में त्रुटि, कृपया इंटरनेट जाँचें!");
+      });
+    } else {
+      currentUser = { ign, uid, email };
+      localStorage.setItem('ff_user_v7', JSON.stringify(currentUser));
+      loadHome(ign, uid, email);
+    }
+  }
+
+  function loadHome(ign, uid, email) {
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById('displayPlayer').innerText = ign;
+    document.getElementById('displayUid').innerText = uid;
+    document.getElementById('avatarLetter').innerText = ign.charAt(0).toUpperCase();
+    if (document.getElementById('adminTopupUid')) {
+      document.getElementById('adminTopupUid').value = uid;
+    }
+    updateBalanceUI();
+    renderMatchDetailsUI();
+  }
+
+  /* ================= 2-STEP LOGOUT ================= */
+  function startLogoutStep1() {
+    openModal('logoutStep1Modal');
+  }
+
+  function proceedToGreenLogoutStep2() {
+    closeModal('logoutStep1Modal');
+    openModal('logoutStep2Modal');
+  }
+
+  function finalLogoutToHomeScreen() {
+    localStorage.removeItem('ff_user_v7');
+    currentUser = { ign: '', uid: '', email: '' };
+    closeModal('logoutStep2Modal');
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('authScreen').style.display = 'flex';
+  }
+
+  /* ================= WALLET TRANSACTIONS ================= */
+  function updateBalanceUI() {
+    document.getElementById('walletBalanceText').innerText = "₹" + walletBalance.toFixed(2);
+    document.getElementById('modalAddBal').innerText = "₹" + walletBalance.toFixed(2);
+    document.getElementById('modalWithdrawBal').innerText = "₹" + walletBalance.toFixed(2);
+    localStorage.setItem('ff_wallet_v7', walletBalance);
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const container = document.getElementById('historyList');
+    if (historyLogs.length === 0) {
+      container.innerHTML = '<div style="background:#0d0f17; padding:10px; border-radius:8px; font-size:12px; color:var(--text-muted); text-align:center;">शुरुआत में कोई लेन-देन नहीं है (बैलेंस ₹0 है)</div>';
+      return;
+    }
+    let html = '';
+    historyLogs.slice().reverse().forEach(item => {
+      const isCredit = item.type === 'credit';
+      html += `
+        <div style="background:#0d0f17; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid #1f2538;">
+          <div>
+            <div style="font-size:12px; font-weight:700; color:#fff;">${item.desc}</div>
+            <div style="font-size:10px; color:var(--text-muted);">${item.time}</div>
+          </div>
+          <div style="font-size:13px; font-weight:800; color:${isCredit ? 'var(--success)' : 'var(--danger)'};">
+            ${isCredit ? '+' : '-'}₹${item.amount}
+          </div>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+    localStorage.setItem('ff_history_v7', JSON.stringify(historyLogs));
+  }
+
+  function openPhonePeForDeposit() {
+    const amt = parseFloat(document.getElementById('addMoneyInput').value) || 10;
+    var upiLink = `upi://pay?pa=${UPI_RECEIVER_ID}&pn=TournamentAdmin&am=${amt}&cu=INR&tn=Deposit_${currentUser.uid}`;
+    if (window.AppInventor && window.AppInventor.setWebViewString) {
+      window.AppInventor.setWebViewString(upiLink);
+    } else {
+      window.location.href = upiLink;
+    }
+  }
+
+  function submitAddMoney() {
+    const amt = parseFloat(document.getElementById('addMoneyInput').value) || 10;
+    const utr = document.getElementById('depositUtrNumber').value.trim();
+
+    if (!utr || utr.length !== 12 || isNaN(utr)) {
+      alert("❌ कृपया सही 12-अंकों का न्यूमेरिक UTR नंबर दर्ज करें!");
+      return;
+    }
+
+    if (amt <= 0) {
+      alert("❌ कृपया मान्य रकम दर्ज करें!");
+      return;
+    }
+
+    if (!isFirebaseReady || !db) {
+      // Local fallback
+      const localUsed = JSON.parse(localStorage.getItem('ff_used_utrs_v7') || '{}');
+      if (localUsed[utr]) {
+        alert("❌ यह 12-अंकों का UTR नंबर पहले ही उपयोग किया जा चुका है! दोबारा जोड़ना सख्त मना है।");
+        return;
+      }
+      localUsed[utr] = true;
+      localStorage.setItem('ff_used_utrs_v7', JSON.stringify(localUsed));
+      walletBalance += amt;
+      const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      historyLogs.push({ desc: 'वॉलेट रिचार्ज (UTR: ' + utr + ')', amount: amt, type: 'credit', time: now });
+      updateBalanceUI();
+      alert('🎉 ₹' + amt + ' आपके वॉलेट में तुरंत जुड़ गए!\n\nनया वॉलेट बैलेंस: ₹' + walletBalance.toFixed(2));
+      document.getElementById('depositUtrNumber').value = '';
+      closeModal('addMoneyModal');
+      return;
+    }
+
+    // 1. STRICT FIREBASE DUPLICATE UTR CHECK
+    const utrRef = db.ref('used_utrs/' + utr);
+    utrRef.once('value').then((snapshot) => {
+      if (snapshot.exists()) {
+        alert("❌ यह 12-अंकों का UTR नंबर पहले ही उपयोग किया जा चुका है! दोबारा या फ़र्ज़ी UTR डालना सख्त मना है।");
+      } else {
+        // 2. LOCK UTR IN DATABASE IMMEDIATELY SO IT CAN NEVER BE REUSED
+        utrRef.set({
+          usedBy: currentUser.uid,
+          ign: currentUser.ign,
+          amount: amt,
+          timestamp: Date.now()
+        }).then(() => {
+          // 3. INSTANT AUTO-CREDIT TO PLAYER'S WALLET
+          db.ref('users/' + currentUser.uid + '/wallet').transaction((curr) => {
+            return (curr || 0) + amt;
+          }, (error, committed, snap) => {
+            if (committed) {
+              walletBalance = snap.val();
+              const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+              historyLogs.push({ desc: 'वॉलेट रिचार्ज (UTR: ' + utr + ')', amount: amt, type: 'credit', time: now });
+              updateBalanceUI();
+
+              // Record in deposit_requests
+              const reqId = 'dep_' + Date.now();
+              db.ref('deposit_requests/' + reqId).set({
+                reqId: reqId,
+                uid: currentUser.uid,
+                ign: currentUser.ign,
+                amount: amt,
+                utr: utr,
+                timestamp: new Date().toISOString(),
+                status: 'auto_approved'
+              });
+
+              alert('🎉 बधाई हो! ₹' + amt + ' आपके वॉलेट में तुरंत जुड़ गए हैं।\n\nवर्तमान वॉलेट बैलेंस: ₹' + walletBalance.toFixed(2));
+              document.getElementById('depositUtrNumber').value = '';
+              closeModal('addMoneyModal');
+            } else {
+              alert("वॉलेट अपडेट में एरर: " + (error ? error.message : "अज्ञात त्रुटि"));
+            }
+          });
+        });
+      }
+    }).catch(err => alert("डेटाबेस एरर: " + err.message));
+  }
+
+  function adminDirectAddMoney() {
+    const targetUid = document.getElementById('adminTopupUid').value.trim() || currentUser.uid;
+    const amt = parseFloat(document.getElementById('adminTopupAmount').value) || 0;
+
+    if (!targetUid) {
+      alert("कृपया खिलाड़ी का UID डालें!");
+      return;
+    }
+    if (amt <= 0) {
+      alert("कृपया मान्य रकम डालें!");
+      return;
+    }
+
+    if (isFirebaseReady && db) {
+      db.ref('users/' + targetUid + '/wallet').transaction((curr) => {
+        return (curr || 0) + amt;
+      }, (error, committed, snapshot) => {
+        if (committed) {
+          alert(`✅ खिलाड़ी (UID: ${targetUid}) के खाते में ₹${amt} सफलता से जुड़ गए!`);
+        }
+      });
+    } else {
+      walletBalance += amt;
+      updateBalanceUI();
+      alert(`✅ स्थानीय रूप से ₹${amt} जोड़े गए!`);
+    }
+
+    const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    historyLogs.push({ desc: 'वॉलेट रिचार्ज (एडमिन स्वीकृत)', amount: amt, type: 'credit', time: now });
+    updateBalanceUI();
+    document.getElementById('adminTopupAmount').value = '';
+    closeModal('adminControlModal');
+  }
+
+    function submitWithdraw() {
+    const upi = document.getElementById('userWithdrawUpi').value.trim();
+    const amt = parseFloat(document.getElementById('withdrawAmount').value) || 0;
+
+    if (!upi) {
+      alert("कृपया अपनी UPI ID दर्ज करें!");
+      return;
+    }
+    if (amt <= 0) {
+      alert("मान्य निकासी रकम दर्ज करें!");
+      return;
+    }
+    if (walletBalance < amt) {
+      alert(`विड्रॉ असफल! आपके पास सिर्फ ₹${walletBalance.toFixed(2)} हैं।`);
+      return;
+    }
+
+    // 1. INSTANT WALLET BALANCE DEDUCTION FROM PLAYER SCREEN
+    walletBalance -= amt;
+    updateBalanceUI();
+
+    const timeString = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    const dateString = new Date().toLocaleDateString('hi-IN');
+    const fullTimeStr = timeString + " (" + dateString + ")";
+
+    // 2. SYNC DEDUCTED WALLET TO FIREBASE & POST WITHDRAW REQUEST
+    if (isFirebaseReady && db && currentUser.uid) {
+      db.ref('users/' + currentUser.uid + '/wallet').set(walletBalance);
+      db.ref('withdraw_requests/' + 'wd_' + Date.now()).set({
+        uid: currentUser.uid,
+        ign: currentUser.ign,
+        upi: upi,
+        amount: amt,
+        timestamp: new Date().toISOString(),
+        timeStr: fullTimeStr,
+        status: 'pending'
+      });
+    }
+
+    historyLogs.push({ desc: `विड्रॉ अनुरोध (${upi})`, amount: amt, type: 'debit', time: timeString });
+    updateBalanceUI();
+    closeModal('withdrawModal');
+
+    // 3. BEAUTIFUL GREEN POPUP WITHOUT BROWSER ALERT / ERROR
+    document.getElementById('withdrawSuccessText').innerText = `तुम्हारे खाते से ₹${amt} कट चुका है और एडमिन को भेज दिया गया है। कुछ देर में आपका रुपया आ जाएगा।`;
+    openModal('withdrawSuccessModal');
+  }
+
+  function payAdminDirect(amt) {
+    var upiLink = `upi://pay?pa=${UPI_RECEIVER_ID}&pn=TournamentAdmin&am=${amt}&cu=INR&tn=Direct_Pay_Entry_${currentUser.uid}`;
+    if (window.AppInventor && window.AppInventor.setWebViewString) {
+      window.AppInventor.setWebViewString(upiLink);
+    } else {
+      window.location.href = upiLink;
+    }
+  }
+
+  /* ================= SEAMLESS MATCH JOINING & ROUND-BASED PER-MATCH LOCK ================= */
+  let pendingMatch = { key: '', name: '', fee: 0 };
+
+  // Common unified handler for both 'Pay & Join' and 'Room ID & Pass' buttons
+  function handleMatchAction(matchName, fee, matchKey) {
+    const m = matchDatabase[matchKey] || {};
+    const actualFee = (m.entry !== undefined) ? m.entry : fee;
+    pendingMatch = { key: matchKey, name: matchName, fee: actualFee };
+    const currentMatchRound = m.round || 1;
+
+    // Case 1: Already paid for THIS CURRENT MATCH ROUND -> Instantly open Room ID & Password!
+    if (joinedMatches[matchKey] === currentMatchRound) {
+      openActualRoomModal(matchKey, matchName);
+      return;
+    }
+
+    // Case 2: Player has sufficient balance in wallet -> Show Green Participation Modal!
+    if (walletBalance >= fee) {
+      document.getElementById('greenModalMatchName').innerText = "🏆 " + matchName;
+      document.getElementById('greenModalSub').innerText = "क्या आप इस टूर्नामेंट में भाग लेना चाहते हैं?\n\nआपके वॉलेट बैलेंस (₹" + walletBalance.toFixed(2) + ") से ₹" + fee + " की मैच फीस काटी जाएगी और रूम आईडी-पासवर्ड तुरंत अनलॉक हो जाएगा।";
+      document.getElementById('btnConfirmGreenJoin').innerText = "🟢 हाँ, मैं भाग लेना चाहता हूँ (कटेंगे ₹" + fee + ")";
+      openModal('joinConfirmGreenModal');
+      return;
+    }
+
+    // Case 3: Player has 0 or insufficient balance -> Show Clean Room Locked Modal with PhonePe option!
+    document.getElementById('roomLockedSub').innerText = "आपने इस मैच ('" + matchName + "') की एंट्री फीस नहीं भरी है और आपके इन-ऐप वॉलेट में पर्याप्त बैलेंस नहीं है (वर्तमान बैलेंस: ₹" + walletBalance.toFixed(2) + ")।\n\nटूर्नामेंट में भाग लेने और रूम अनलॉक करने के लिए सीधे PhonePe से ₹" + fee + " का भुगतान करें:";
+    document.getElementById('btnPayViaPhonePe').innerText = "⚡ PhonePe से ₹" + fee + " देकर अनलॉक करें";
+    openModal('roomLockedModal');
+  }
+
+  // When player clicks the Green Button in joinConfirmGreenModal
+  function executeWalletDeductionAndUnlock() {
+    closeModal('joinConfirmGreenModal');
+    const fee = pendingMatch.fee;
+    const matchKey = pendingMatch.key;
+    const matchName = pendingMatch.name;
+    const currentMatchRound = matchDatabase[matchKey].round || 1;
+    const playerIGN = currentUser.ign || 'Player';
+    const playerUID = currentUser.uid || '0';
+
+    if (walletBalance >= fee) {
+      walletBalance -= fee;
+      // Lock explicitly to THIS CURRENT ROUND ONLY
+      joinedMatches[matchKey] = currentMatchRound;
+      localStorage.setItem('ff_joined_v7', JSON.stringify(joinedMatches));
+
+      // Sync with Firebase Realtime Database
+      if (isFirebaseReady && db) {
+        db.ref('users/' + playerUID + '/wallet').set(walletBalance);
+        db.ref('users/' + playerUID + '/joined_matches/' + matchKey).set(currentMatchRound);
+        db.ref('matches/' + matchKey + '/joined').transaction((curr) => (curr || 0) + 1);
+      }
+
+      const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      historyLogs.push({ desc: 'मैच फीस (' + playerIGN + '): ' + matchName, amount: fee, type: 'debit', time: now });
+      updateBalanceUI();
+      
+      // Directly show the unlocked room!
+      openActualRoomModal(matchKey, matchName);
+    }
+  }
+
+  // When player clicks PhonePe button from roomLockedModal
+  function executePhonePePaymentFromModal() {
+    closeModal('roomLockedModal');
+    const fee = pendingMatch.fee;
+    const matchName = pendingMatch.name;
+    const playerIGN = currentUser.ign || 'Player';
+
+    var upiLink = "upi://pay?pa=" + UPI_RECEIVER_ID + "&pn=TournamentAdmin&am=" + fee + "&cu=INR&tn=" + encodeURIComponent(playerIGN + '_' + matchName);
+
+    if (window.AppInventor && window.AppInventor.setWebViewString) {
+      window.AppInventor.setWebViewString(upiLink);
+    } else {
+      window.location.href = upiLink;
+    }
+  }
+
+  // Helper to open room modal with details
+  function openActualRoomModal(matchKey, matchName) {
+    document.getElementById('roomModalTitle').innerText = "🔑 " + matchName;
+    const m = matchDatabase[matchKey] || { id: '', pass: '' };
+
+    if (m.id && m.id.trim() !== '') {
+      document.getElementById('displayRoomId').innerText = m.id;
+      document.getElementById('displayRoomPass').innerText = m.pass || 'कोई पासवर्ड नहीं';
+      document.getElementById('roomModalSub').innerText = "✅ कन्फर्म खिलाड़ी: मैच रूम आईडी और पासवर्ड नीचे दिया गया है:";
+    } else {
+      document.getElementById('displayRoomId').innerText = "15 मिनट पहले जारी होगा";
+      document.getElementById('displayRoomPass').innerText = "******";
+      document.getElementById('roomModalSub').innerText = "कन्फर्म खिलाड़ी: मैच शुरू होने से 15 मिनट पहले रूम आईडी यहाँ दिखेगी।";
+    }
+
+    openModal('playerRoomModal');
+  }
+
+  // Route existing buttons seamlessly
+  function joinTournamentMatch(matchName, fee, matchKey) {
+    handleMatchAction(matchName, fee, matchKey);
+  }
+
+  function viewRoomDetails(matchKey, matchName, fee) {
+    handleMatchAction(matchName, fee, matchKey);
+  }
+
+  // Admin function to finish current match and start a brand new match round
+  function adminStartNewRoundForMatch() {
+    const selected = document.getElementById('adminMatchSelect').value;
+    const currentRound = matchDatabase[selected].round || 1;
+    const nextRound = currentRound + 1;
+
+    const confirmReset = confirm("क्या आप सच में नया मैच शुरू करना चाहते हैं?\n\nऐसा करने से पुराने सभी खिलाड़ियों का रूम तुरंत बंद (लॉक) हो जाएगा और नए मैच के लिए उन्हें दोबारा फीस देनी होगी।");
+    if (!confirmReset) return;
+
+    matchDatabase[selected].round = nextRound;
+    matchDatabase[selected].joined = 0; // reset slots count to 0
+    matchDatabase[selected].id = '';     // clear previous room id
+    matchDatabase[selected].pass = '';   // clear previous room pass
+
+    document.getElementById('adminInputSlots').value = 0;
+    document.getElementById('adminInputRoomId').value = '';
+    document.getElementById('adminInputPass').value = '';
+
+    localStorage.setItem('ff_matches_v7', JSON.stringify(matchDatabase));
+    renderMatchDetailsUI();
+
+    if (isFirebaseReady && db) {
+      db.ref('matches/' + selected).update({
+        round: nextRound,
+        joined: 0,
+        id: '',
+        pass: ''
+      }).then(() => {
+        alert("🎉 नया मैच (राउंड #" + nextRound + ") सफलता से शुरू हो गया!\n\nपुराने सभी खिलाड़ियों का रूम बंद (लॉक) हो गया है। अब जो भी खिलाड़ी आएगा, उससे दोबारा फीस ली जाएगी!");
+      }).catch(err => {
+        alert("अपडेट हो गया: " + err.message);
+      });
+    } else {
+      alert("🎉 नया मैच (राउंड #" + nextRound + ") शुरू हो गया! पुराने खिलाड़ियों का रूम लॉक हो गया है।");
+    }
+
+    closeModal('adminControlModal');
+  }
+
+  /* ================= ADMIN LIVE CLOUD CONTROLLER ================= */
+  function openAdminSecurityPrompt() {
+    // Dusra koi banda click karega to kuch bhi nahi hoga (Silent lock)
+    if (!isCurrentAdminUser()) {
+      return;
+    }
+
+    const enteredPin = prompt("👑 एडमिन सीक्रेट पिन दर्ज करें:");
+    if (enteredPin === ADMIN_SECRET_PIN) {
+      loadAdminInputs();
+      openModal('adminControlModal');
+    } else if (enteredPin !== null) {
+      alert("❌ गलत एडमिन पिन!");
+    }
+  }
+
+  function loadAdminInputs() {
+    const selected = document.getElementById('adminMatchSelect').value;
+    const m = matchDatabase[selected] || { id: '', pass: '', time: '', joined: 0, entry: 5, booyah: 200, perkill: 10 };
+    document.getElementById('adminInputTime').value = m.time || '';
+    document.getElementById('adminInputSlots').value = m.joined || 0;
+    document.getElementById('adminInputRoomId').value = m.id || '';
+    document.getElementById('adminInputPass').value = m.pass || '';
+    document.getElementById('adminInputEntry').value = (m.entry !== undefined) ? m.entry : 5;
+    document.getElementById('adminInputBooyah').value = (m.booyah !== undefined) ? m.booyah : 200;
+    document.getElementById('adminInputPerKill').value = (m.perkill !== undefined) ? m.perkill : 10;
+  }
+
+  function saveMatchSettingsByAdmin() {
+    const selected = document.getElementById('adminMatchSelect').value;
+    const newTime = document.getElementById('adminInputTime').value.trim();
+    const newSlots = parseInt(document.getElementById('adminInputSlots').value) || 0;
+    const rId = document.getElementById('adminInputRoomId').value.trim();
+    const rPass = document.getElementById('adminInputPass').value.trim();
+    const newEntry = parseInt(document.getElementById('adminInputEntry').value) || 5;
+    const newBooyah = parseInt(document.getElementById('adminInputBooyah').value) || 200;
+    const newPerKill = parseInt(document.getElementById('adminInputPerKill').value) || 0;
+
+    const updateObj = {
+      time: newTime || matchDatabase[selected].time,
+      joined: newSlots,
+      id: rId,
+      pass: rPass,
+      entry: newEntry,
+      booyah: newBooyah,
+      perkill: newPerKill
+    };
+
+    matchDatabase[selected] = Object.assign(matchDatabase[selected], updateObj);
+    localStorage.setItem('ff_matches_v7', JSON.stringify(matchDatabase));
+    renderMatchDetailsUI();
+
+    if (isFirebaseReady && db) {
+      db.ref('matches/' + selected).update(updateObj).then(() => {
+        alert("☁️ Firebase में लाइव अपडेट हो गया! सभी खिलाड़ियों के फोन पर तुरंत नई एंट्री फीस व इनाम बदल गए हैं।");
+      }).catch(err => {
+        alert("सेव हो गया (लोकल), एरर: " + err.message);
+      });
+    } else {
+      alert("✅ स्थानीय रूप से मैच सेटिंग्स सेव हो गई!");
+    }
+
+    closeModal('adminControlModal');
+  }
+
+  function filterMatches(category) {
+    const cards = document.querySelectorAll('.match-item');
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs.forEach(t => t.classList.remove('active'));
+    
+    if (category === 'all') {
+      tabs[0].classList.add('active');
+      cards.forEach(c => c.style.display = 'block');
+      document.getElementById('matchesCategoryTitle').innerText = 'सभी टूर्नामेंट (9 मैचेस)';
+    } else if (category === 'br') {
+      tabs[1].classList.add('active');
+      cards.forEach(c => c.style.display = c.classList.contains('br') ? 'block' : 'none');
+      document.getElementById('matchesCategoryTitle').innerText = 'Battle Royale BR मैचेस (4)';
+    } else if (category === 'cs') {
+      tabs[2].classList.add('active');
+      cards.forEach(c => c.style.display = c.classList.contains('cs') ? 'block' : 'none');
+      document.getElementById('matchesCategoryTitle').innerText = 'Clash Squad 4v4 मैचेस (3)';
+    } else if (category === 'lw') {
+      tabs[3].classList.add('active');
+      cards.forEach(c => c.style.display = c.classList.contains('lw') ? 'block' : 'none');
+      document.getElementById('matchesCategoryTitle').innerText = 'Lone Wolf मैचेस (2)';
+    }
+  }
+
+  function copyUpi(upi) {
+    navigator.clipboard.writeText(upi).then(() => {
+      alert("UPI ID कॉपी हो गई: " + upi);
+    }).catch(() => {
+      alert("UPI ID: " + upi);
+    });
+  }
+
+  function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+  function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+
+
+    // ================= LIVE TOURNAMENT MESSENGER (REAL CHAT STREAM) =================
+  function openAdminChatModal() {
+    openModal('adminChatModal');
+    
+    // Check if the currently logged-in player is Admin (Prakash)
+    const isAdmin = isCurrentAdminUser();
+    const adminInput = document.getElementById('adminChatInputSection');
+    const userNotice = document.getElementById('userChatReadOnlyNotice');
+
+    if (isAdmin) {
+      if (adminInput) adminInput.style.display = 'block';
+      if (userNotice) userNotice.style.display = 'none';
+    } else {
+      if (adminInput) adminInput.style.display = 'none';
+      if (userNotice) userNotice.style.display = 'block';
+    }
+
+    // Scroll to bottom of chat
+    setTimeout(() => {
+      const container = document.getElementById('adminChatMessagesList');
+      if (container) container.scrollTop = container.scrollHeight;
+    }, 150);
+  }
+
+  function sendAdminBroadcastMessage() {
+    if (!isCurrentAdminUser()) {
+      alert("⚠️ केवल एडमिन ही संदेश भेज सकते हैं!");
+      return;
+    }
+    const inputElem = document.getElementById('adminChatMessageText');
+    const msgText = inputElem.value.trim();
+    if (!msgText) {
+      return;
+    }
+
+    const noticeData = {
+      text: msgText,
+      sender: 'कातिल_प्रकाश (एडमिन)',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: new Date().toLocaleDateString(),
+      timestamp: Date.now()
+    };
+
+    if (isFirebaseReady && db) {
+      db.ref('admin_notices').push(noticeData).then(() => {
+        inputElem.value = '';
+      }).catch(err => alert("त्रुटि: " + err.message));
+    } else {
+      inputElem.value = '';
+    }
+  }
+
+  function renderAdminNotices(snapshot) {
+    const data = snapshot.val();
+    const container = document.getElementById('adminChatMessagesList');
+    if (!container) return;
+
+    if (!data) {
+      container.innerHTML = '<div style="font-size: 12px; color: var(--text-muted); text-align: center; margin: auto;">अभी तक कोई नया संदेश नहीं है।</div>';
+      return;
+    }
+
+    let html = '';
+    // Show in chronological order like real WhatsApp chat
+    const keys = Object.keys(data);
+    keys.forEach(key => {
+      const item = data[key];
+      html += `
+        <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 88%;">
+          <div style="font-size: 10px; font-weight: 700; color: var(--accent); margin-bottom: 3px; margin-left: 6px;">
+            👑 ${item.sender || 'एडमिन'}
+          </div>
+          <div style="background: linear-gradient(135deg, #1b2033 0%, #161a29 100%); border: 1px solid #2a334d; border-left: 3px solid var(--primary); padding: 10px 14px; border-radius: 14px 14px 14px 3px; box-shadow: 0 4px 12px rgba(0,0,0,0.35);">
+            <div style="font-size: 13px; color: #fff; line-height: 1.45; word-break: break-word;">${item.text || ''}</div>
+            <div style="font-size: 9px; color: var(--text-muted); text-align: right; margin-top: 4px;">${item.time || ''}</div>
+          </div>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+
+    // Auto scroll to bottom like WhatsApp
+    setTimeout(() => {
+      container.scrollTop = container.scrollHeight;
+    }, 100);
+  }
+
+
+    
+  // Dual-Chime Notification Sound Synthesizer (Works without external mp3, offline & loud!)
+  function playWithdrawNotificationChime() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      // Note 1 (High chime)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'triangle';
+      osc1.frequency.setValueAtTime(659.25, now); // E5
+      gain1.gain.setValueAtTime(0.4, now);
+      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.35);
+
+      // Note 2 (Higher chime)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(987.77, now + 0.18); // B5
+      gain2.gain.setValueAtTime(0.5, now + 0.18);
+      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.18);
+      osc2.stop(now + 0.7);
+    } catch(e) {
+      console.log("Audio play error:", e);
+    }
+
+    // Phone vibration if supported
+    if (navigator.vibrate) {
+      navigator.vibrate([200, 100, 200, 100, 300]);
+    }
+  }
+
+  // Show Top Notification Banner on screen (like YouTube/Android Notification)
+  function showTopNotificationBanner(title, body, timeStr) {
+    const banner = document.getElementById('topNotificationBanner');
+    if (!banner) return;
+    document.getElementById('bannerNotifTitle').innerText = title;
+    document.getElementById('bannerNotifBody').innerText = body;
+    document.getElementById('bannerNotifTime').innerText = timeStr || 'अभी';
+
+    banner.classList.add('show');
+    playWithdrawNotificationChime();
+
+    // Also send bridge event to Kodular AppInventor
+    if (window.AppInventor && window.AppInventor.setWebViewString) {
+      window.AppInventor.setWebViewString("NOTIFY:" + title + " - " + body);
+    }
+
+    // Auto-hide after 7 seconds
+    setTimeout(() => {
+      banner.classList.remove('show');
+    }, 7000);
+  }
+
+  let lastSeenWithdrawCount = -1;
+  let seenWithdrawIds = {};
+
+  function renderAdminWithdrawRequests(snapshot) {
+    const data = snapshot.val();
+    const container = document.getElementById('adminWithdrawRequestsList');
+    if (!container) return;
+
+    if (!data) {
+      container.innerHTML = '<div style="font-size: 12px; color: var(--text-muted); text-align: center; background: #0d0f17; padding: 10px; border-radius: 8px;">कोई नया विड्रॉ अनुरोध पेंडिंग नहीं है।</div>';
+      return;
+    }
+
+    let html = '';
+    let hasPending = false;
+    let pendingCount = 0;
+    let newlyAddedItem = null;
+
+    for (let reqId in data) {
+      const item = data[reqId];
+      if (item && item.status === 'pending') {
+        hasPending = true;
+        pendingCount++;
+
+        // Detect if this is a newly arrived withdraw request
+        if (!seenWithdrawIds[reqId]) {
+          seenWithdrawIds[reqId] = true;
+          if (lastSeenWithdrawCount !== -1) {
+            newlyAddedItem = item;
+          }
+        }
+
+        const displayTime = item.timeStr || (item.timestamp ? (new Date(item.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + ' (' + new Date(item.timestamp).toLocaleDateString('hi-IN') + ')') : 'अभी-अभी');
+        html += `
+          <div style="background: #0d0f17; border: 1px solid #2a3148; padding: 12px; border-radius: 12px; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div>
+                <b style="font-size: 14px; color: #fff;">${item.ign || 'Player'}</b>
+                <span style="font-size: 10px; color: var(--accent); margin-left: 6px; font-family: monospace;">UID: ${item.uid}</span>
+              </div>
+              <span style="font-size: 16px; font-weight: 800; color: var(--success);">₹${item.amount}</span>
+            </div>
+            <div style="font-size: 11px; color: #cbd5e1; margin-bottom: 4px;">
+              UPI: <code style="color: var(--accent); font-weight: 700; font-size: 12px;">${item.upi}</code>
+            </div>
+            <div style="font-size: 11px; color: #ffb703; margin-bottom: 8px; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+              ⏰ <span>विड्रॉ का समय: <b>${displayTime}</b></span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="action-btn btn-pay" style="padding: 9px; font-size: 11px; border-radius: 8px;" onclick="payUserWithdrawViaPhonePe('${item.upi}', ${item.amount}, '${item.ign || 'Player'}', '${reqId}')">
+                ⚡ PhonePe से भेजें
+              </button>
+              <button class="action-btn btn-room" style="padding: 9px; font-size: 11px; border-radius: 8px;" onclick="markWithdrawCompleted('${reqId}')">
+                ✅ पूरा हुआ (हटाएँ)
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    if (!hasPending) {
+      container.innerHTML = '<div style="font-size: 12px; color: var(--text-muted); text-align: center; background: #0d0f17; padding: 10px; border-radius: 8px;">कोई नया विड्रॉ अनुरोध पेंडिंग नहीं है।</div>';
+    } else {
+      container.innerHTML = html;
+    }
+
+    // Trigger Notification & Sound if Admin is in the app and a new withdrawal arrived!
+    if (newlyAddedItem && isCurrentAdminUser()) {
+      const notifMsg = `${newlyAddedItem.ign || 'खिलाड़ी'} (UID: ${newlyAddedItem.uid}) ने ₹${newlyAddedItem.amount} का विड्रॉ किया है।`;
+      showTopNotificationBanner("🔔 नया विड्रॉ अनुरोध आया!", notifMsg, newlyAddedItem.timeStr);
+    }
+
+    lastSeenWithdrawCount = pendingCount;
+  }
+
+
+  function payUserWithdrawViaPhonePe(upiId, amount, ign, reqId) {
+    if (!upiId) {
+      alert("खिलाड़ी की UPI ID मौजूद नहीं है!");
+      return;
+    }
+    var upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(ign)}&am=${amount}&cu=INR&tn=Tournament_Prize_${amount}`;
+    
+    // Open PhonePe directly
+    if (window.AppInventor && window.AppInventor.setWebViewString) {
+      window.AppInventor.setWebViewString(upiLink);
+    } else {
+      window.location.href = upiLink;
+    }
+  }
+
+  function markWithdrawCompleted(reqId) {
+    if (confirm("क्या आपने खिलाड़ी के खाते में पैसे भेज दिए हैं और इसे पूरा मार्क करना चाहते हैं?")) {
+      if (isFirebaseReady && db) {
+        db.ref('withdraw_requests/' + reqId).update({
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        }).then(() => {
+          alert("✅ विड्रॉ अनुरोध पूरा हो गया!");
+        });
+      }
+    }
+  }
+
+
+
+  // ================= ADMIN USER BAN / UNBAN SYSTEM =================
+  function adminToggleUserBan(isBan) {
+    const targetUid = document.getElementById('adminBanUid').value.trim();
+    if (!targetUid) {
+      alert("कृपया खिलाड़ी का UID नंबर डालें!");
+      return;
+    }
+
+    if (isFirebaseReady && db) {
+      const newStatus = isBan ? 'banned' : 'active';
+      db.ref('users/' + targetUid + '/status').set(newStatus).then(() => {
+        if (isBan) {
+          alert("🚫 खिलाड़ी (UID: " + targetUid + ") को हमेशा के लिए ब्लॉक (BANNED) कर दिया गया है!\n\nअब वह इस ऐप में कभी भी लॉगिन नहीं कर पाएगा। अगर वह ऐप के अंदर भी होगा तो तुरंत बाहर फेंक दिया जाएगा।");
+        } else {
+          alert("🟢 खिलाड़ी (UID: " + targetUid + ") का बैन हटा दिया गया है (UNBANNED)।");
+        }
+        document.getElementById('adminBanUid').value = '';
+      }).catch(err => alert("एरर: " + err.message));
+    } else {
+      alert("डेटाबेस कनेक्टेड नहीं है!");
+    }
+  }
+
+</script>
+
+</body>
+</html>
